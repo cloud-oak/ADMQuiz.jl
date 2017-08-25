@@ -1,0 +1,17 @@
+# Dolphin
+.directory
+
+# Temp stuff
+temp*
+tmp*
+test*
+
+# Python
+__pycache__
+.ipynb_checkpoints
+
+# XML Output Files
+*.xml
+
+# Notebooks
+*.ipynb
