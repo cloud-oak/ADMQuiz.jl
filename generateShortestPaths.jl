@@ -1,20 +1,93 @@
 using ADMStructures
 using ShortestPaths
 using TikzPictures
+using Tqdm
 using MoodleQuiz
 
-function generatePathsMC(G=build_mesh_graph(4, 4); number=30, right_answers=2, false_answers=2)
+NUM_EXCERCISES = 1         # Anzahl an Aufgaben, die generiert werden
+PATH_RANGE = 1:8           # Zufallsbereich für Kanten auf der KWA
+OFFSET_RANGE = 1:1         # Zufallsbereich, wieviel teurer Kanten außerhalb der KWA sind
+G = build_mesh_graph(4, 4) # Der Graph
+
+G.directed = true
+spring_positions!(G, springlength=0)
+sp_labelling!(G)
+
+function generateOnestepDijkstraExcercises(G::Graph; number::Int=NUM_EXCERCISES, minsteps=2, maxleft=3, max_iterations=1000)
+    allowed_depths = collect(minsteps:(length(G.V) - maxleft))
+
     questions = []
-    tmp = "tmpfile"
+
+    iterations = 0
+    while (length(questions) < number) && (iterations < max_iterations)
+        iterations += 1
+
+        unique_shortestpaths!(G)
+        dist, rating, visited = rating_dijkstra(G, depth=rand(allowed_depths))
+
+        next_node, next_uniq = argmin(setdiff(G.V, visited), by=dist, return_uniq=true)
+
+        if !next_uniq
+            continue
+        end
+
+        num_changed = 0
+        num_left = 0 
+
+        new_dist = deepcopy(dist)
+
+        for (i, v) in G.E
+            if i == next_node
+                if dist[v] <= dist[i] + G.c[i, v]
+                    num_left += 1
+                elseif dist[v] > dist[i] + G.c[i, v]
+                    num_changed += 1
+                    new_dist[v] = dist[i] + G.c[i, v]
+                end
+            end
+        end
+
+        G.labels = ["$l : $(dist[v] == Inf ? "\\infty" : dist[v])" for (l, v) in zip(G.labels, G.V)]
+        dijkstra_img = graph_moodle(G, marked_nodes=visited)
+
+        sp_labelling!(G)
+
+        vector_answer = VectorEmbeddedAnswer(
+            [new_dist[v] for v in G.V],
+            labels=G.labels
+        )
+
+        push!(questions, Question(EmbeddedAnswers,
+            Name="Dijkstra Einzelschritt",
+            Text=MoodleText("""
+                Führen Sie im unten abgebildeten Graphen eine Iteration des Dijkstra-Algorithmus aus. <br />
+                <center>$(EmbedFile(dijkstra_img, width="12cm", height="8cm"))</center><br />
+                $vector_answer
+                """,
+
+                MoodleQuiz.HTML, [dijkstra_img])
+            )
+        )
+    end
+
+    return questions   
+end
+
+function generatePathsMC(G=build_mesh_graph(4, 4); number=30, right_answers=2, false_answers=2, dijkstra_fail=false)
+    questions = []
     text = "Welche der folgenden Wege sind kürzeste \\(s\\)-\\(t\\)-Wege im abgebildeten Graphen?"
     
     G.positions = spring_positions(G, springlength=0)
     G.directed = true
     sp_labelling!(G)
     
-    for i in 1:number
+    for i in tqdm(1:number)
         @label retry_generation
-        multiple_st_paths!(G, num_ambiguities=right_answers)
+        if (dijkstra_fail)
+            unique_shortestpaths!(G, dijkstra_fail=true)
+        else
+            multiple_st_paths!(G, num_ambiguities=right_answers)
+        end
 
         paths = all_paths(G)
         dist  = minimum(c for (p, c) in paths)
@@ -41,9 +114,7 @@ function generatePathsMC(G=build_mesh_graph(4, 4); number=30, right_answers=2, f
         if length(answers) < right_answers + false_answers
             @goto retry_generation
         end
-
-        save(SVG(tmp), graph(G))
-        img = MoodleFile("$tmp.svg")
+        img = graph_moodle(G)
 
         push!(questions,
             Question(MultipleChoice,
@@ -58,3 +129,7 @@ function generatePathsMC(G=build_mesh_graph(4, 4); number=30, right_answers=2, f
     end
     return questions
 end
+
+questions = generatePathsMC(G)
+quiz      = Quiz(questions, "ShortestPathsDijkstraFail")
+exportXML(quiz, "dijkstra_fail.xml")

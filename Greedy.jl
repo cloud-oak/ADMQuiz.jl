@@ -5,29 +5,22 @@ using MoodleQuiz
 using TikzPictures
 using MoodleTools
 
-"""
-    Labels the vertices so that it is useful for minimal spantrees.
-    All vertices are labelled "v_i"
-"""
-function greedy_labelling!(G::Graph)
-    G.labels = ["v_{$i}" for (i, v) in enumerate(G.V)]
-end
-
-type Partition{T}
+export Partition
+type Partition
     """
-    A Disjoint-Set structure
+    Disjoint-Set structure für Kruskal
     See https://en.wikipedia.org/wiki/Disjoint-set_data_structure
     """
-    parent::Dict{T, T}
-    _component::Dict{T, Set{T}}
+    parent::Dict
+    _component::Dict
     component::Function
     find::Function
     union::Function
 
-    function Partition{T}(entries::Any) where T
+    function Partition(entries::Any)
         self = new()
-        self.parent = Dict{T, T}((v, v) for v in entries)
-        self._component = Dict{T, Set{T}}((v, Set(v)) for v in entries)
+        self.parent = Dict((v, v) for v in entries)
+        self._component = Dict((v, Set(v)) for v in entries)
         self.component = x -> self._component[partition_find(self, x)]
         self.find = x -> partition_find(self, x)
         self.union = (x, y) -> partition_union(self, x, y)
@@ -35,7 +28,7 @@ type Partition{T}
     end
 end
 
-function partition_find{T}(self::Partition{T}, x::T)
+function partition_find(self::Partition, x)
     """
     Finds an Element's class within a partition
     """
@@ -45,7 +38,7 @@ function partition_find{T}(self::Partition{T}, x::T)
     return self.parent[x]
 end
 
-function partition_union{T}(self::Partition{T}, x::T, y::T)
+function partition_union(self::Partition, x, y)
     """
     Merges two classes in a partition
     """
@@ -64,27 +57,24 @@ function partition_union{T}(self::Partition{T}, x::T, y::T)
     end
 end
 
-function kruskal(G; depth=Inf, break_on_unique=true, min_depth=0)
+export kruskal
+function kruskal(G; break_on_unique=false, min_depth=Inf)
     """
     Kruskal's algorithm
     """
     E = G.E
     V = G.V
     c = (e -> G.c[e[1], e[2]])
-    
-    if isinf(depth)
-        depth = length(E)
-    end
 
     parts = Partition(G.V)
     F = Set()
     Q = Set(G.E)
 
     for i in 1:length(G.E)
-        e, uniq = argmin(G.E, by=c, return_uniq=true)
+        e, uniq = argmin(Q, by=c, return_uniq=true)
+        delete!(Q, e)
         v, w = e
-        v, w = e
-        if parts.parent[v] != parts.parent[w]
+        if parts.find(v) != parts.find(w)
             if i >= min_depth && break_on_unique && uniq
                 return F
             end
@@ -92,227 +82,111 @@ function kruskal(G; depth=Inf, break_on_unique=true, min_depth=0)
             parts.union(v, w)
         end
     end
-    return F
+    if break_on_unique
+        return F, e
+    else
+        return F
+    end
 end
 
-function unique_shortestpaths!(G; root=1, wanted_edges=[])
-    # Finde gewurzelten Spannbaum
-    randomedges = G.E[randperm(length(G.E))]
-    connected = Set([root])
-    T = wanted_edges
-    for (i, j) in wanted_edges
-        push!(connected, j)
-    end
-    label = Dict{Int, Float32}(v => Inf for v in G.V)
-    label[root] = 0
-    while length(connected) != length(G.V)
-        for (i, j) in randomedges
-            if i in connected && !(j in connected)
-                push!(T, (i, j))
-                push!(connected, j)
-                G.c[i, j] = rand(1:5)
-            end
-        end
-    end
-    for _ in 1:length(G.V)
-        # relax edges, a cheap Bellman-Ford
-        for (i, j) in T
-            if label[i] + G.c[i,j] < label[j]
-                label[j] = label[i] + G.c[i, j]
-            end
-            label[j] = min(label[j], label[i] + G.c[i, j])
-        end
-    end
-    for (i, j) in G.E
-        if (i, j) in T
-            continue
-        end
-        G.c[i, j] = max(0, label[j] - label[i]) + 1
-    end
-    
-    return T, label
+export random_spantree
+function random_spantree(G)
+    """
+    Generiert einen zufälligen Spannbaum mit Kruskal
+    """
+    true_costs = G.c
+    G.c = rand(1:100, length(G.V), length(G.V))
+    T = kruskal(G)
+    G.c = true_costs
+    return T
 end
 
-function rating_dijkstra(G::Graph; root=1, depth=Inf)
-    # rating variables
-    completely_unique = true
-    num_changed = 0
-    num_same = 0
-    num_left = 0
+export uniqueify_spantree!
+function uniqueify_spantree!(G; range_on_tree=1:8, offset_range=1:1)
+  """
+  Modifiziert die Kosten des Graphen sodass `T`
+  der eindeutige Minimale Spannbaum ist.
+  """
+  T = random_spantree(G)
+  G.c = zeros(Int64, length(G.V), length(G.V))
+
+  for (v, w) in T
+    G.c[v, w] = rand(range_on_tree)
+  end
+  G.c += transpose(G.c) # Symmetrische Distanzmatrix
+
+  for (v, w) in setdiff(G.E, T)
+    G.c[v, w] = max_edge_in_path(G, T, v, w) + rand(offset_range)
+    G.c[w, v] = G.c[v, w]
+  end
+
+  return T
+end
+
+function max_edge_in_path(G::Graph, edge_subset=G.E, s=1, t=-1)
+    assert(G.c == transpose(G.c))
     
-    # dist: The distance of root -> v
-    dist = Dict{Any, Any}()
-    # edge_dist: The length of root -> v in edges
-    edge_dist = Dict{Any, Any}()
-    
-    for v in G.V
-        dist[v] = Inf
-        edge_dist[v] = Inf
+    if t == -1
+        t = G.V[end]
     end
-    dist[root] = 0
-    edge_dist[root] = 0
     
-    S = Set()
-    Q = Set(G.V)
-    
-    while !isempty(Q) && length(S) < depth
-        u, uniq = argmin(Q, by=dist, return_uniq=true)
-        completely_unique &= uniq
-        push!(S, u)
-        delete!(Q, u)
-        for (i, v) in G.E
-            if i == u
-                if dist[v] < dist[u] + G.c[u, v]
-                    num_left += 1
-                elseif dist[v] > dist[u] + G.c[u, v]
-                    num_changed += 1
-                    dist[v] = dist[u] + G.c[u, v]
-                    edge_dist[v] = edge_dist[u] + 1
-                else
-                    num_same += 1
+    q = [[s]]
+    max_edges = [0]
+
+    while !isempty(q)
+        path = pop!(q)
+        max_edge = pop!(max_edges)
+        
+        last = path[end]
+        
+        for (i, j) in edge_subset
+            if j == last
+                i, j = j, i
+            end
+            if i == last
+                if j == t
+                    return max(max_edge, G.c[i, j])
+                elseif (j ∉ path) || (s == t == j) # Keine Kreise außer s=t
+                    push!(q, path ∪ [j])
+                    push!(max_edges, max(max_edge, G.c[i, j]))
                 end
             end
         end
     end
-    return dist, Dict(
-        "Algorithmus eindeutig" => completely_unique,
-        "Anzahl geändert" => num_changed,
-        "Anzahl gelassen" => num_left,
-        "Anzahl egal" => num_same,
-        "s-t-Kanten" => edge_dist[length(G.V)]
-    ), S
+    paths
 end
 
-function generateFullDijsktraExcercises(G::Graph; number::Int=30)
-    G.positions = spring_positions(G, springlength=0)
-    G.directed = true
-    sp_labelling!(G)
-    get_label = Dict((v, label) for (v, label) in zip(G.V, G.labels))
-
-    instances = []
-    paths = Set([])
-
-    for i in 1:(2 * number)
-        T, _ = unique_shortestpaths!(G)
-
-        current = G.V[end]
-        path = [get_label[current]]
-        while current != G.V[1]
-            for (i, j) in T
-                if j == current
-                    current = i
-                    push!(path, get_label[i])
-                end
-            end
+export uniqueify_matroid
+function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
+    elements = m.E[randperm(length(m.E))]
+    tmp_E = Set()
+    costs = Dict()
+    circs = circles(m)
+    
+    # Wähle zufällige Basis
+    B = rand(bases(m))
+    
+    for e in B
+        costs[e] = rand(range_on_basis)
+    end
+    
+    for c in circs
+        rest = setdiff(c, B)
+        if length(rest) == 1
+            # Es gibt eine Kreisrotation von B um c
+            e = first(rest)
+            costs[e] = maximum(costs[k] for k in intersect(c, B)) + rand(offset_range)
         end
-        # reverse the path
-        path = path[end:-1:1]
-        push!(paths, path)
-        push!(instances, (deepcopy(G), path))
     end
-
-    function rating_function(instance)
-        g, path = instance
-        metrics = rating_dijkstra(g)[2]
-        return metrics["Anzahl geändert"] + 3 * metrics["s-t-Kanten"] - 1000 * metrics["Anzahl egal"]
-    end
-
-    instances = sort(instances, by = rating_function)[1:number]
-
-    questions = map(instances) do instance
-        g, path = instance
-        tmp = "tmpfile"
-        save(SVG(tmp), graph(g))
-        img = MoodleFile("$tmp.svg")
-
-        text = "Welche der folgenden Wege sind kürzeste \\(s\\)-\\(t\\)-Wege im abgebildeten Graphen?"
-        correct_answer = join(path, " \\rightarrow ")
-        answers = [Answer("\\($correct_answer\\)", Correct=1)]
-
-        other_options = collect(setdiff(paths, [path]))[randperm(length(paths) - 1)]
-        num_others = min(length(other_options), 3)
-
-        for false_path in [1:num_others]
-            false_answer = join(false_path, " \\rightarrow ")
-            push!(answers, Answer("\\($false_answer\\)", Correct=0))
-        end
-
-        Question(MultipleChoice,
-            Name = "Find Shortest Path",
-            Text = MoodleText(
-                join([text, EmbedFile(img, width="18cm")], "<br />\n"),
-                MoodleQuiz.HTML, [img]
-            ),
-            Answers = answers
-        )
-    end
-
-    return questions
+    return costs, B
 end
 
-function generateOnestepDijkstraExcercises(G::Graph; number::Int=30, minsteps=2, maxleft=3, max_iterations=1000)
-    depths = collect(minsteps:(length(G.V) - maxleft))
-
-    G.positions = spring_positions(G, springlength=0)
-    G.directed = true
-    sp_labelling!(G)
-
-    questions = []
-
-    iterations = 0
-    while (length(questions) < number) && (iterations < max_iterations)
-        iterations += 1
-
-        unique_shortestpaths!(G)
-        dist, rating, visited = rating_dijkstra(G, depth=rand(depths))
-
-        next_node, next_uniq = argmin(setdiff(G.V, visited), by=dist, return_uniq=true)
-
-        if !next_uniq
-            continue
-        end
-
-        num_changed = 0
-        num_left = 0 
-
-        new_dist = deepcopy(dist)
-
-        for (i, v) in G.E
-            if i == next_node
-                if dist[v] <= dist[i] + G.c[i, v]
-                    num_left += 1
-                elseif dist[v] > dist[i] + G.c[i, v]
-                    num_changed += 1
-                    new_dist[v] = dist[i] + G.c[i, v]
-                end
-            end
-        end
-
-        G.labels = ["$l : $(dist[v] == Inf ? "\\infty" : dist[v])" for (l, v) in zip(G.labels, G.V)]
-        save(SVG("tmpfile"), graph(G, marked_nodes=visited))
-        dijkstra_img = MoodleFile("tmpfile.svg")
-
-        sp_labelling!(G)
-
-        vector_answer = VectorEmbeddedAnswer(
-            [new_dist[v] for v in G.V],
-            labels=G.labels
-        )
-
-        push!(questions, Question(EmbeddedAnswers,
-            Name="Dijkstra Einzelschritt",
-            Text=MoodleText("""
-                Führen Sie im unten abgebildeten Graphen eine Iteration des Dijkstra-Algorithmus aus. <br />
-                <center>$(EmbedFile(dijkstra_img, width="12cm", height="8cm"))</center><br />
-                $vector_answer
-                """,
-
-                MoodleQuiz.HTML, [dijkstra_img])
-            )
-        )
-    end
-
-    return questions   
+export uniqueify_matroid!
+function uniqueify_matroid!(m::Matroid)
+  c, B = uniqueify_matroid(m)
+  m.c = c
+  return c, B
 end
+
 
 end

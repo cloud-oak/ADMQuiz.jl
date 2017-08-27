@@ -1,59 +1,24 @@
 module ShortestPaths
 
-export unique_shortestpaths!, dijkstra, rating_dijkstra, generateFullDijkstraExcercises, sp_labelling!, generateOnestepDijkstraExcercises
+export unique_shortestpaths!, dijkstra, rating_dijkstra 
 
 using ADMStructures
 using MoodleQuiz
 using TikzPictures
 using MoodleTools
 
-"""
-    Labels the vertices so that it is useful for shortest paths.
-    The first vertex is labelled "s", the last vertex "t".
-    All other vertices are labelled "v_i"
-"""
-function sp_labelling!(G::Graph)
-    G.labels = ["v_{$(i-1)}" for (i, v) in enumerate(G.V)]
-    G.labels[1] = "s"
-    G.labels[end] = "t"
-end
-
-function unique_shortestpaths!(G; root=1, wanted_edges=[])
-    # Finde gewurzelten Spannbaum
-    randomedges = G.E[randperm(length(G.E))]
-    connected = Set([root])
-    T = wanted_edges
-    for (i, j) in wanted_edges
-        push!(connected, j)
-    end
+function bellman_ford(G::Graph; root=1, edge_subset=G.E)
     label = Dict{Int, Float32}(v => Inf for v in G.V)
     label[root] = 0
-    while length(connected) != length(G.V)
-        for (i, j) in randomedges
-            if i in connected && !(j in connected)
-                push!(T, (i, j))
-                push!(connected, j)
-                G.c[i, j] = rand(1:5)
-            end
-        end
-    end
     for _ in 1:length(G.V)
-        # relax edges, a cheap Bellman-Ford
-        for (i, j) in T
+        for (i, j) in edge_subset
             if label[i] + G.c[i,j] < label[j]
                 label[j] = label[i] + G.c[i, j]
             end
             label[j] = min(label[j], label[i] + G.c[i, j])
         end
     end
-    for (i, j) in G.E
-        if (i, j) in T
-            continue
-        end
-        G.c[i, j] = max(0, label[j] - label[i]) + 1
-    end
-    
-    return T, label
+    return label
 end
 
 function dijkstra(G::Graph; root=1, depth=Inf)
@@ -135,137 +100,55 @@ function rating_dijkstra(G::Graph; root=1, depth=Inf)
     ), S
 end
 
-function generateFullDijsktraExcercises(G::Graph; number::Int=30)
-    G.positions = spring_positions(G, springlength=0)
-    G.directed = true
-    sp_labelling!(G)
-    get_label = Dict((v, label) for (v, label) in zip(G.V, G.labels))
+function unique_shortestpaths!(G; root=1, dijkstra_fail=false, path_range=1:8, offset_range=1:1)
+    # Finde gewurzelten Spannbaum
+    connected = Set([root])
+    label = Dict{Int, Float32}(v => Inf for v in G.V)
+    label[root] = 0
+    T = Set()
 
-    instances = []
-    paths = Set([])
-
-    for i in 1:(2 * number)
-        T, _ = unique_shortestpaths!(G)
-
-        current = G.V[end]
-        path = [get_label[current]]
-        while current != G.V[1]
-            for (i, j) in T
-                if j == current
-                    current = i
-                    push!(path, get_label[i])
-                end
+    while length(connected) != length(G.V)
+        for (i, j) in random_order(G.E) 
+            if i in connected && !(j in connected)
+                push!(T, (i, j))
+                push!(connected, j)
+                G.c[i, j] = rand(path_range)
+                label[j] = label[i] + G.c[i, j]
             end
         end
-        # reverse the path
-        path = path[end:-1:1]
-        push!(paths, path)
-        push!(instances, (deepcopy(G), path))
     end
 
-    function rating_function(instance)
-        g, path = instance
-        metrics = rating_dijkstra(g)[2]
-        return metrics["Anzahl geändert"] + 3 * metrics["s-t-Kanten"] - 1000 * metrics["Anzahl egal"]
-    end
+    skip_edges = []
 
-    instances = sort(instances, by = rating_function)[1:number]
+    if dijkstra_fail
+        for (v, w) in random_order(setdiff(G.E, T))
+            if label[v] > label[w]
+                G.c[v, w] = label[w] - label[v] - rand(offset_range)
 
-    questions = map(instances) do instance
-        g, path = instance
-        tmp = "tmpfile"
-        save(SVG(tmp), graph(g))
-        img = MoodleFile("$tmp.svg")
-
-        text = "Welche der folgenden Wege sind kürzeste \\(s\\)-\\(t\\)-Wege im abgebildeten Graphen?"
-        correct_answer = join(path, " \\rightarrow ")
-        answers = [Answer("\\($correct_answer\\)", Correct=1)]
-
-        other_options = collect(setdiff(paths, [path]))[randperm(length(paths) - 1)]
-        num_others = min(length(other_options), 3)
-
-        for false_path in [1:num_others]
-            false_answer = join(false_path, " \\rightarrow ")
-            push!(answers, Answer("\\($false_answer\\)", Correct=0))
+                # Alten parent von w löschen
+                for (a, b) in T
+                    if (b == w)
+                        push!(skip_edges, (a, b))
+                        delete!(T, (a, b))
+                    end
+                end
+                push!(T, (v, w))
+                label = bellman_ford(G, root=root, edge_subset=T)
+                break
+            end
         end
-
-        Question(MultipleChoice,
-            Name = "Find Shortest Path",
-            Text = MoodleText(
-                join([text, EmbedFile(img, width="18cm")], "<br />\n"),
-                MoodleQuiz.HTML, [img]
-            ),
-            Answers = answers
-        )
     end
 
-    return questions
-end
-
-function generateOnestepDijkstraExcercises(G::Graph; number::Int=30, minsteps=2, maxleft=3, max_iterations=1000)
-    depths = collect(minsteps:(length(G.V) - maxleft))
-
-    G.positions = spring_positions(G, springlength=0)
-    G.directed = true
-    sp_labelling!(G)
-
-    questions = []
-
-    iterations = 0
-    while (length(questions) < number) && (iterations < max_iterations)
-        iterations += 1
-
-        unique_shortestpaths!(G)
-        dist, rating, visited = rating_dijkstra(G, depth=rand(depths))
-
-        next_node, next_uniq = argmin(setdiff(G.V, visited), by=dist, return_uniq=true)
-
-        if !next_uniq
+    for (i, j) in G.E
+        if (i, j) in union(T, skip_edges)
             continue
         end
-
-        num_changed = 0
-        num_left = 0 
-
-        new_dist = deepcopy(dist)
-
-        for (i, v) in G.E
-            if i == next_node
-                if dist[v] <= dist[i] + G.c[i, v]
-                    num_left += 1
-                elseif dist[v] > dist[i] + G.c[i, v]
-                    num_changed += 1
-                    new_dist[v] = dist[i] + G.c[i, v]
-                end
-            end
-        end
-
-        G.labels = ["$l : $(dist[v] == Inf ? "\\infty" : dist[v])" for (l, v) in zip(G.labels, G.V)]
-        save(SVG("tmpfile"), graph(G, marked_nodes=visited))
-        dijkstra_img = MoodleFile("tmpfile.svg")
-
-        sp_labelling!(G)
-
-        vector_answer = VectorEmbeddedAnswer(
-            [new_dist[v] for v in G.V],
-            labels=G.labels
-        )
-
-        push!(questions, Question(EmbeddedAnswers,
-            Name="Dijkstra Einzelschritt",
-            Text=MoodleText("""
-                Führen Sie im unten abgebildeten Graphen eine Iteration des Dijkstra-Algorithmus aus. <br />
-                <center>$(EmbedFile(dijkstra_img, width="12cm", height="8cm"))</center><br />
-                $vector_answer
-                """,
-
-                MoodleQuiz.HTML, [dijkstra_img])
-            )
-        )
+        G.c[i, j] = max(0, label[j] - label[i]) + rand(offset_range)
     end
-
-    return questions   
+    
+    return T, label
 end
+
 
 export multiple_st_paths!
 function multiple_st_paths!(G; s=1, t=-1, num_ambiguities=2)
@@ -273,6 +156,9 @@ function multiple_st_paths!(G; s=1, t=-1, num_ambiguities=2)
         t = G.V[end]
     end
     
+    label = Dict{Int, Float32}(v => Inf for v in G.V)
+    label[s] = 0
+
     # Finde Arboreszenz
     T = Set()
     connected = Set([s])
@@ -284,13 +170,10 @@ function multiple_st_paths!(G; s=1, t=-1, num_ambiguities=2)
                 push!(connected, j)
                 # Zufällige Kosten für Kanten auf KWA
                 G.c[i, j] = rand(1:5)
+                label[j] = label[i] + G.c[i, j]
             end
         end
     end
-    # Setze Label gemäß KWA-Kantenkosten
-    H = deepcopy(G)
-    H.E = collect(T)
-    label = dijkstra(H, root=s)
     
     # We have one path already
     ambiguity = 1
@@ -298,13 +181,11 @@ function multiple_st_paths!(G; s=1, t=-1, num_ambiguities=2)
     for (i, j) in random_order(G.E)
         if (i, j) ∉ T
             if ambiguity < num_ambiguities && reachable(G, j, t) && label[j] ≥ label[i]
-                # TODO: Für Dijkstra positive Kanten wahren?
+                # TODO: Für Dijkstra positive Kanten bewahren?
                 ambiguity += 1
                 G.c[i, j] = label[j] - label[i]
-                println(" -> ", (i, j), ": ", G.c[i,j])
             else
                 G.c[i, j] = max(0, label[j] - label[i] + 1)
-                println((i, j), ": ", G.c[i,j])
             end
         end
     end
@@ -320,8 +201,6 @@ function all_paths(G::Graph, s=1, t=-1)
     if t == -1
         t = G.V[end]
     end
-    s = 1
-    t = G.V[end]
 
     q = [[s]]
     costs = [0]
@@ -330,9 +209,6 @@ function all_paths(G::Graph, s=1, t=-1)
 
     count = 0
     while !isempty(q)
-        if isempty(q)
-            break
-        end
         path = pop!(q)
         cost = pop!(costs)
         last = path[end]
@@ -366,5 +242,4 @@ function reachable(G::Graph, s, t)::Bool
     end
     return (t ∈ connected)
 end
-
 end

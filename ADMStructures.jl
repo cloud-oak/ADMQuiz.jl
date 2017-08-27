@@ -1,9 +1,11 @@
 module ADMStructures
 using TikzPictures
 using Combinatorics
+using MoodleQuiz
 
 preamble = readstring("tikzheader.tex")
 
+export powerset
 function powerset(x)
 	result = reduce(union, Set(), [combinations(x, n) for n in 0:length(x)])
   return result
@@ -12,6 +14,7 @@ end
 export random_order
 random_order(list) = list[randperm(length(list))]
 
+export argmin
 function argmin(list; by=x->x, return_uniq::Bool=false)
 	if by isa Dict
 		dict = by
@@ -65,24 +68,61 @@ function Matroid(;bases=[], costs=[])
 	return Matroid(E, I, c)
 end
 
+export is_matroid
+function is_matroid(m::Matroid)
+  """
+  Prüft, ob `m` tatsächlich ein Matroid ist.
+  """ 
+  # Unabhängigkeits-Bedingung (m1)
+  for e in m.I
+      for s in powerset(e)
+          if !(s in m.I)
+              return "Kein US"
+          end
+      end
+  end
+  # Matroid-Bedingung (m2)
+  for A in m.I
+      for B in m.I
+          if length(A) > length(B)
+              exchange_possible = false
+              for e in setdiff(A, B)
+                  if sort(union(B, [e])) in m.I
+                      exchange_possible = true
+                  end
+              end
+              if !exchange_possible
+                  return string("Austausch: ", B, " -> ", A)
+              end
+          end
+      end
+  end
+  return true
+end
+
 function dim(m::Matroid)
 	return maximum([length(i) for i in m.I])
 end
 
+export repr_html, repr_tex
 repr_html(x::Any) = string(x)
 repr_tex(x::Any) = string(x)
 
 repr_tex(v::Vector) = length(v) == 0 ? "\\emptyset" : "\\{$(join([repr_tex(x) for x in v], ", "))\\}"
 
 repr_html(m::Matroid) = string(
+  "<p>",
   "\\( \\mathcal{M} = (E, \\mathcal I) \\),<br />",
-  "\\( E = $(repr_tex(m.E)) \\),<br /> \\( \\mathcal I = $(repr_tex(m.I))) \\)<br />",
+  "\\( E = $(repr_tex(m.E)) \\),<br /> \\( \\mathcal I = $(repr_tex(m.I))) \\)",
+  "</p><p>",
   "<table style=\"border:1px solid black; border-collapse: collapse; width:initial;\"><tr><td style=\"border:1px solid black\">\\( e \\)</td>",
   join(["<td style=\"border: 1px solid black\">$e</td>" for e in m.E]),
   "</tr><tr><td style=\"border: 1px solid black\">\\( c(e)\\)</td>",
-  join(["<td style=\"border: 1px solid black\">$(m.c(e))</td>" for e in m.E]),
-  "</tr></table>")
+  join(["<td style=\"border: 1px solid black\">$(m.c[e])</td>" for e in m.E]),
+  "</tr></table>",
+  "</p>")
 
+export matroidGraph
 function matroidGraph(m::Matroid)
 	identifier = i -> "node_$(join(i, "_"))"
 	label      = i -> length(i) == 0 ? "\\emptyset" : "\\{$(join(i, ","))\\}"
@@ -156,6 +196,7 @@ type Graph
 	end
 end
 
+export graph
 function graph(G; highlight_edges = [], marked_nodes = [])
 	hl = [Tuple(x) for x in highlight_edges]
 
@@ -175,6 +216,18 @@ function graph(G; highlight_edges = [], marked_nodes = [])
    TikzPicture(string(nodes, edges), preamble=preamble, options="scale=2")
 end
 
+export graph_moodle
+function graph_moodle(G; highlight_edges = [], marked_nodes = [])
+  TMP = tempname()
+
+  tp = graph(G, highlight_edges=highlight_edges, marked_nodes=marked_nodes)
+  save(SVG(TMP), tp)
+  mf = MoodleFile("$TMP.svg")
+  rm("$TMP.svg")
+  return mf
+end
+
+export graph_svg
 function graph_svg(G)
   save(SVG("tmp"), graph(G))
   svg = ""
@@ -184,6 +237,7 @@ function graph_svg(G)
   return svg
 end
 
+export spring_positions
 function spring_positions(G; width=8, height=5, iterations=100, springlength=0, subdivisions=20)
   """
   Brute force a rectangular spring layout by fixing:
@@ -266,10 +320,12 @@ function spring_positions(G; width=8, height=5, iterations=100, springlength=0, 
   return optimal_positions
 end
 
-function spring_positions!(G; width=8, height=5, iterations=100, springlength=2)
+export spring_positions!
+function spring_positions!(G; width=8, height=5, iterations=100, springlength=0)
   G.positions = spring_positions(G, width=width, height=height, iterations=iterations, springlength=springlength)
 end
 
+export build_wheel_graph
 function build_wheel_graph(n)
   V = collect(1:n)
   labels = ["v_{$i}" for i in V]
@@ -293,7 +349,7 @@ function build_wheel_graph(n)
   return Graph(V, E, c=c, positions=positions, labels=labels)
 end
 
-
+export build_mesh_graph
 function build_mesh_graph(width, height)
   n = width * height
 
@@ -316,25 +372,18 @@ function build_mesh_graph(width, height)
   return Graph(V, E, c=c, positions=positions, labels=labels)
 end
 
-function unique_spantree(G)
-  T = Set()
-  c = Dict()
-
-  p = Partition{Int}(G.V)
-
-  for (i, j) in G.E[randperm(length(G.E))] 
-      if p.find(i) == p.find(j)
-          c[(i, j)] = maximum( values(c) ) + 1
-      else
-          p.union(i, j)
-          push!(T, (i, j))
-          val = rand(1:5)
-          c[(i, j)] = val
-      end
-  end
-  return c, T
+export rank
+function rank(m::Matroid)
+  return maximum(length(e) for e in m.I)
 end
 
+export bases
+function bases(m::Matroid)
+  r = rank(m)
+  return [b for b in m.I if length(b) == r]
+end
+
+export circles
 function circles(m::Matroid)
   circles = []
   for d in setdiff(powerset(m.E), m.I)
@@ -352,44 +401,30 @@ function circles(m::Matroid)
   circles
 end
 
-function uniqueify_matroid(m::Matroid)
-  elements = m.E[randperm(length(m.E))]
-  tmp_E = Set()
-  B = Set()
-  costs = Dict()
-
-  circs = circles(m)
-
-  for e in elements
-      joined = union(B, e)
-
-      if !any([(e in c) for c in circs if issubset(c, joined)])
-          costs[e] = rand(1:4)
-          push!(B, e)
-      else
-          costs[e] = 1 + maximum( costs[e] for e in B )
-      end
-      push!(tmp_E, e)
-  end
-  return (e -> costs[e]), B
-end
-
-function uniqueify_matroid!(m::Matroid)
-  c, B = uniqueify_matroid
-  m.c = c
-  return c, B
-end
-
+export randomize_weights
 function randomize_weights(G, sample_from=1:10)
   G.c = rand(sample_from, G.c)
 end
 
+export greedy_labelling!
 function greedy_labelling!(G::Graph)
     """
     Labels the vertices so that it is useful for minimal spantrees.
     All vertices are labelled "v_i"
     """
     G.labels = ["v_{$i}" for (i, v) in enumerate(G.V)]
+end
+
+export sp_labelling!
+function sp_labelling!(G::Graph)
+    """
+    Labels the vertices so that it is useful for shortest paths.
+    The first vertex is labelled "s", the last vertex "t".
+    All other vertices are labelled "v_i"
+    """
+    G.labels = ["v_{$(i-1)}" for (i, v) in enumerate(G.V)]
+    G.labels[1] = "s"
+    G.labels[end] = "t"
 end
 
 end
