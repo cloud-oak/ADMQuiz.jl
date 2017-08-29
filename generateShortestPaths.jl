@@ -1,13 +1,13 @@
 using ADMStructures
+using MoodleTools
 using ShortestPaths
-using TikzPictures
 using Tqdm
 using MoodleQuiz
 
 NUM_EXCERCISES = 1         # Anzahl an Aufgaben, die generiert werden
 PATH_RANGE = 1:8           # Zufallsbereich für Kanten auf der KWA
 OFFSET_RANGE = 1:1         # Zufallsbereich, wieviel teurer Kanten außerhalb der KWA sind
-G = build_mesh_graph(4, 4) # Der Graph
+G = build_mesh_graph(3, 3) # Der Graph
 
 G.directed = true
 spring_positions!(G, springlength=0)
@@ -60,8 +60,10 @@ function generateOnestepDijkstraExcercises(G::Graph; number::Int=NUM_EXCERCISES,
         push!(questions, Question(EmbeddedAnswers,
             Name="Dijkstra Einzelschritt",
             Text=MoodleText("""
-                Führen Sie im unten abgebildeten Graphen eine Iteration des Dijkstra-Algorithmus aus. <br />
-                <center>$(EmbedFile(dijkstra_img, width="12cm", height="8cm"))</center><br />
+                Führen Sie im unten abgebildeten Graphen eine Iteration des Dijkstra-Algorithmus aus.
+                (Geben Sie dabei den Wert \\(\\infty\\) als 'inf' ein.)
+                <br />
+                $(EmbedFile(dijkstra_img, width="12cm", height="8cm"))<br />
                 $vector_answer
                 """,
 
@@ -130,6 +132,6 @@ function generatePathsMC(G=build_mesh_graph(4, 4); number=30, right_answers=2, f
     return questions
 end
 
-questions = generatePathsMC(G)
+questions = generateOnestepDijkstraExcercises(G)
 quiz      = Quiz(questions, "ShortestPathsDijkstraFail")
 exportXML(quiz, "dijkstra_fail.xml")
