@@ -4,7 +4,6 @@ push!(LOAD_PATH, pwd())
 using ADMStructures
 using MoodleQuiz
 using TikzPictures
-using MoodleTools
 
 # TODO: maybe move Partition to ADMStructures?
 export Partition
@@ -60,13 +59,13 @@ function partition_union(self::Partition, x, y)
 end
 
 export kruskal
-function kruskal(G; break_on_unique=false, min_depth=Inf)
+function kruskal(G, c; break_on_unique=false, min_depth=Inf)
     """
-    Kruskal's algorithm
+    Kruskals Algorithmus
     """
     E = G.E
     V = G.V
-    c = (e -> G.c[e[1], e[2]])
+    c = (e -> c[e[1], e[2]])
 
     parts = Partition(G.V)
     F = Set()
@@ -94,39 +93,42 @@ end
 export random_spantree
 function random_spantree(G)
     """
-    Generiert einen zufälligen Spannbaum mit Kruskal
+    Generiert einen zufälligen Spannbaum -- Kruskal mit zufälligen Gewichten
     """
-    true_costs = G.c
-    G.c = rand(1:100, length(G.V), length(G.V))
-    T = kruskal(G)
-    G.c = true_costs
+    c = rand(1:100, length(G.V), length(G.V))
+    T = kruskal(G, c)
     return T
 end
 
-export uniqueify_spantree!
-function uniqueify_spantree!(G; range_on_tree=1:8, offset_range=1:1)
+export uniqueify_spantree
+function uniqueify_spantree(G; range_on_tree=1:8, offset_range=1:1)
   """
   Modifiziert die Kosten des Graphen sodass `T`
   der eindeutige Minimale Spannbaum ist.
   """
   T = random_spantree(G)
-  G.c = zeros(Int64, length(G.V), length(G.V))
+  c = zeros(Int64, length(G.V), length(G.V))
 
   for (v, w) in T
-    G.c[v, w] = rand(range_on_tree)
+    c[v, w] = rand(range_on_tree)
   end
-  G.c += transpose(G.c) # Symmetrische Distanzmatrix
+  c += transpose(c) # Symmetrische Distanzmatrix
 
   for (v, w) in setdiff(G.E, T)
-    G.c[v, w] = max_edge_in_path(G, T, v, w) + rand(offset_range)
-    G.c[w, v] = G.c[v, w]
+    c[v, w] = max_edge_in_path(G, c, v, w, edges=T) + rand(offset_range)
+    c[w, v] = c[v, w]
   end
 
   return T
 end
 
-function max_edge_in_path(G::Graph, edge_subset=G.E, s=1, t=-1)
-    assert(G.c == transpose(G.c))
+function max_edge_in_path(G::Graph, costs, s=1, t=-1; edges=G.E)
+	"""
+	Hilfsfunktion für `random_spantree`, im Prinzip eine DFS.
+	Findet das teuerste Gewicht auf dem (vorausgesetzt eindeutigen) s-t-Weg.
+	"""
+	# Wir benötigen eine symmetrische Distanzmatrix
+    assert(c == transpose(c))
     
     if t == -1
         t = G.V[end]
@@ -141,12 +143,14 @@ function max_edge_in_path(G::Graph, edge_subset=G.E, s=1, t=-1)
         
         last = path[end]
         
-        for (i, j) in edge_subset
+        for (i, j) in edges
             if j == last
                 i, j = j, i
             end
             if i == last
                 if j == t
+					# Wir setzen Eindeutigkeit des s-t-Wegs voraus,
+					# können also an dieser Stelle abbrechen
                     return max(max_edge, G.c[i, j])
                 elseif (j ∉ path) || (s == t == j) # Keine Kreise außer s=t
                     push!(q, path ∪ [j])
@@ -173,15 +177,51 @@ function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
         costs[e] = rand(range_on_basis)
     end
     
-    for c in circles(m)
-        rest = setdiff(c, B)
-        if length(rest) == 1
-            # Es gibt eine Kreisrotation von B um c
-            e = first(rest)
-            costs[e] = maximum(costs[k] for k in intersect(c, B)) + rand(offset_range)
-        end
-    end
+	for e in setdiff(m.E, B)
+		for K in circles(m)
+			outer = setdiff(K, B) # Teil des Kreises außerhalb der Basis 
+			if (length(outer) == 1) && (first(outer) == e) # <=> K = K_B(e)
+				c_lower = maximum(costs[k] for k in K ∩ B)
+				costs[e] = c_lower + rand(offset_range)
+			end
+		end
+	end
+
     return costs, B
 end
 
+export generate_matroid_question
+function generate_matroid_question(M::Matroid; range_on_basis=1:8, offset_range=1:1)
+	"""
+	Generiert Matroid-Frage im MoodleQuiz-Format
+	"""
+	set_string = x -> "{$(join(x, ", "))}" # Wandelt ein Array in das Format {1, 2, 3, ...} um
+
+    c, B = uniqueify_matroid(M)
+
+    # Höchstens 100 Versuche
+    for i in 1:100 
+        # Es soll ein Basiselement geben, das teurer ist als ein
+        # Nichtbasiselement, damit die Aufgabe interessant ist
+		if maximum(c[e] for e in B) > minimum(c[e] for e in setdiff(M.E, B))
+            break
+        end
+        c, B = uniqueify_matroid(M)
+    end
+
+    solution = set_string(B) # Die richtige Lösung als String
+    # Stack - ProblemResponseTree bauen
+    input = StackInput(AlgebraicInput, "ans1", solution, SyntaxHint="{1, 2, 3, ...}", SyntaxAttribute=1)
+    tree = PRTree()
+    node1 = PRTNode(tree, input, solution)
+
+    text = """<p>Finden Sie für das Matroid \$\\mathcal{M}\$ eine minimale Basis unter der Kostenfunktion \$c\$.</p>
+    $(repr_html(M))
+    $(EmbedInput(input))
+    """
+
+	return Question(Stack, Name="Greedy-Algorithmus",
+					Text=text, Inputs=[input], ProblemResponseTree=tree)
 end
+
+end # module
