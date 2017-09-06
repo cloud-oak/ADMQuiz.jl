@@ -167,27 +167,38 @@ function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
 	"""
 	Algorithmus 2.2
 	"""
-    costs = Dict()
+	for tries in 1:10
+		costs = Dict()
 
-    # Wähle zufällige Basis
-    B = rand(bases(m))
-    
-    for e in B
-		# beliebige Kosten auf B
-        costs[e] = rand(range_on_basis)
-    end
-    
-	for e in setdiff(m.E, B)
-		for K in circles(m)
-			outer = setdiff(K, B) # Teil des Kreises außerhalb der Basis 
-			if (length(outer) == 1) && (first(outer) == e) # <=> K = K_B(e)
-				c_lower = maximum(costs[k] for k in K ∩ B)
-				costs[e] = c_lower + rand(offset_range)
+		# Wähle zufällige Basis
+		B = rand(bases(m))
+		
+		for e in B
+			# beliebige Kosten auf B
+			costs[e] = rand(range_on_basis)
+		end
+		
+		for e in setdiff(m.E, B)
+			for K in circles(m)
+				outer = setdiff(K, B) # Teil des Kreises außerhalb der Basis 
+				if (length(outer) == 1) && (first(outer) == e) # <=> K = K_B(e)
+					c_lower = maximum(costs[k] for k in K ∩ B)
+					costs[e] = c_lower + rand(offset_range)
+				end
 			end
 		end
-	end
 
-    return costs, B
+		# Sicherstellen, dass Lösung eindeutig
+		_, unique = argmin(bases, by = (b -> sum(costs[e] for e in b)), return_uniq=true)
+		if unique
+			return costs, B
+		end
+	end
+	# Hartnäckiger Fall... Wir ziehen uns zurück auf Satz 2.11, injektive Kostenfunktion
+	costs = Dict(zip(m.E, randperm(length(m.E))))
+	B = argmin(bases, by = (b -> sum(costs[e] for e in b)))
+
+	return costs, B
 end
 
 export generate_matroid_question
