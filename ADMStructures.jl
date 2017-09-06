@@ -45,7 +45,6 @@ export Matroid
 type Matroid
 	E
 	I
-	c
 end
 
 function setlt(a, b)
@@ -64,12 +63,11 @@ function Matroid(;bases=[], costs=[])
 		sort!(i)
 	end
 	sort!(I, lt=setlt)
-	c = (x -> costs[x])
-	return Matroid(E, I, c)
+	return Matroid(E, I)
 end
 
 export is_matroid
-function is_matroid(m::Matroid)
+@memoize function is_matroid(m::Matroid)
   """
   Prüft, ob `m` tatsächlich ein Matroid ist.
   """ 
@@ -100,7 +98,7 @@ function is_matroid(m::Matroid)
   return true
 end
 
-function dim(m::Matroid)
+@memoize function dim(m::Matroid)
 	return maximum([length(i) for i in m.I])
 end
 
@@ -110,7 +108,7 @@ repr_tex(x::Any) = string(x)
 
 repr_tex(v::Vector) = length(v) == 0 ? "\\emptyset" : "\\{$(join([repr_tex(x) for x in v], ", "))\\}"
 
-repr_html(m::Matroid) = string(
+repr_html(m::Matroid, c) = string(
   "<p>",
   "\\( \\mathcal{M} = (E, \\mathcal I) \\),<br />",
   "\\( E = $(repr_tex(m.E)) \\),<br /> \\( \\mathcal I = $(repr_tex(m.I))) \\)",
@@ -118,7 +116,7 @@ repr_html(m::Matroid) = string(
   "<table style=\"border:1px solid black; border-collapse: collapse; width:initial;\"><tr><td style=\"border:1px solid black\">\\( e \\)</td>",
   join(["<td style=\"border: 1px solid black\">$e</td>" for e in m.E]),
   "</tr><tr><td style=\"border: 1px solid black\">\\( c(e)\\)</td>",
-  join(["<td style=\"border: 1px solid black\">$(m.c[e])</td>" for e in m.E]),
+  join(["<td style=\"border: 1px solid black\">$(c[e])</td>" for e in m.E]),
   "</tr></table>",
   "</p>")
 
@@ -378,13 +376,13 @@ function rank(m::Matroid)
 end
 
 export bases
-function bases(m::Matroid)
+@memoize function bases(m::Matroid)
   r = rank(m)
   return [b for b in m.I if length(b) == r]
 end
 
 export circles
-function circles(m::Matroid)
+@memoize function circles(m::Matroid)
   circles = []
   for d in setdiff(powerset(m.E), m.I)
       is_circle = true

@@ -1,10 +1,12 @@
 module Greedy
+push!(LOAD_PATH, pwd())
 
 using ADMStructures
 using MoodleQuiz
 using TikzPictures
 using MoodleTools
 
+# TODO: maybe move Partition to ADMStructures?
 export Partition
 type Partition
     """
@@ -158,19 +160,20 @@ end
 
 export uniqueify_matroid
 function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
-    elements = m.E[randperm(length(m.E))]
-    tmp_E = Set()
+	"""
+	Algorithmus 2.2
+	"""
     costs = Dict()
-    circs = circles(m)
-    
+
     # Wähle zufällige Basis
     B = rand(bases(m))
     
     for e in B
+		# beliebige Kosten auf B
         costs[e] = rand(range_on_basis)
     end
     
-    for c in circs
+    for c in circles(m)
         rest = setdiff(c, B)
         if length(rest) == 1
             # Es gibt eine Kreisrotation von B um c
@@ -180,13 +183,5 @@ function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
     end
     return costs, B
 end
-
-export uniqueify_matroid!
-function uniqueify_matroid!(m::Matroid)
-  c, B = uniqueify_matroid(m)
-  m.c = c
-  return c, B
-end
-
 
 end

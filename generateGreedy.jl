@@ -1,5 +1,7 @@
 #!/usr/bin/julia
+include("./ADMStructures.jl")
 using ADMStructures
+
 using Greedy
 using MoodleQuiz
 using Tqdm
