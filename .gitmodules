@@ -1,3 +1,6 @@
 [submodule "Tqdm.jl"]
 	path = Tqdm.jl
 	url = git@github.com:cloud-oak/Tqdm.jl
+[submodule "MoodleQuiz"]
+	path = MoodleQuiz
+	url = git@github.com:cloud-oak/MoodleQuiz
