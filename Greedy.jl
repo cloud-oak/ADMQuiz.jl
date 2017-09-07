@@ -130,9 +130,9 @@ spring_positions!(STD_GRAPH, width=5, height=5)
 export generate_spantree_question
 function generate_spantree_question(G::Graph=STD_GRAPH, range_on_tree=1:8, offset_range=1:1)
     T, c = uniqueify_spantree(G)
-    
+
     # Höchstens 100 Versuche
-    for i in 1:100 
+    for i in 1:100
         # Es soll ein Basiselement geben, das teurer ist als ein
         # Nichtbasiselement, damit die Aufgabe interessant ist
         cost = x -> c[x[1], x[2]]
@@ -142,7 +142,7 @@ function generate_spantree_question(G::Graph=STD_GRAPH, range_on_tree=1:8, offse
 
         T = uniqueify_spantree(G)
     end
-    
+ 
     img_basic = graph_moodle(G, c)
 
 	# Richtige Antwort bauen
@@ -154,7 +154,7 @@ function generate_spantree_question(G::Graph=STD_GRAPH, range_on_tree=1:8, offse
         [img_right]
     )
     answers = [Answer(answertext, Correct=1)]
-	
+
 	# Falsche Antworten hinzufügen
 	while(length(answers) < 4)
 		R = random_spantree(G)

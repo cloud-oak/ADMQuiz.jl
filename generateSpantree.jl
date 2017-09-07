@@ -20,32 +20,26 @@ spring_positions!(G, width=5, height=5)
 
 set_string = x -> "{$(join(x, ", "))}" # Wandelt ein Array in das Format {1, 2, 3, ...} um
 
-random_spantrees = []
-while(length(random_spantrees) < 5)
-    T = random_spantree(G)
-    if !(T in random_spantrees)
-        push!(random_spantrees, T)
-    end
-end
 
 questions = []
 
 for i in tqdm(1:NUM_EXCERCISES)
-    B = uniqueify_spantree!(G)
+    T, c = uniqueify_spantree(G)
     
     # Höchstens 100 Versuche
     for i in 1:100 
         # Es soll ein Basiselement geben, das teurer ist als ein
         # Nichtbasiselement, damit die Aufgabe interessant ist
-        c = x -> G.c[x[1], x[2]]
-        if any(any(c(k) < c(e) for k in setdiff(G.E, B)) for e in B)
+        cost = x -> c[x[1], x[2]]
+		if maximum(c(e) for e in B) > minimum(c(e) for e in setdiff(G.E, B))
             break
         end
-        B = uniqueify_spantree!(G)
+
+        T = uniqueify_spantree(G)
     end
     
-    img_basic = graph_moodle(G)
-    img_right = graph_moodle(G, highlight_edges = B)
+    img_basic = graph_moodle(G, c)
+    img_right = graph_moodle(G, c, highlight_edges = T)
 
     answertext = MoodleText(
         EmbedFile(img_right, width="10cm"),
@@ -53,10 +47,12 @@ for i in tqdm(1:NUM_EXCERCISES)
         [img_right]
     )
     answers = [Answer(answertext, Correct=1)]
-
-    for T in random_spantrees
-        if Set(T) != Set(B)
-            img_false = graph_moodle(G, highlight_edges = T)
+	
+	# Falsche Antworten hinzufügen
+	while(length(answers) < 4)
+		R = random_spantree(G)
+        if Set(T) != Set(R)
+            img_false = graph_moodle(G, c, highlight_edges = R)
             
             answertext = MoodleText(
                 EmbedFile(img_false, width="10cm"),
