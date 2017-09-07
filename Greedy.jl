@@ -3,7 +3,6 @@ push!(LOAD_PATH, pwd())
 
 using ADMStructures
 using MoodleQuiz
-using TikzPictures
 
 # TODO: maybe move Partition to ADMStructures?
 export Partition
@@ -65,14 +64,14 @@ function kruskal(G, c; break_on_unique=false, min_depth=Inf)
     """
     E = G.E
     V = G.V
-    c = (e -> c[e[1], e[2]])
+    cost = (e -> c[e[1], e[2]])
 
     parts = Partition(G.V)
     F = Set()
     Q = Set(G.E)
 
     for i in 1:length(G.E)
-        e, uniq = argmin(Q, by=c, return_uniq=true)
+        e, uniq = argmin(Q, by=cost, return_uniq=true)
         delete!(Q, e)
         v, w = e
         if parts.find(v) != parts.find(w)
@@ -119,10 +118,76 @@ function uniqueify_spantree(G; range_on_tree=1:8, offset_range=1:1)
     c[w, v] = c[v, w]
   end
 
-  return T
+  return T, c
 end
 
-function max_edge_in_path(G::Graph, costs, s=1, t=-1; edges=G.E)
+STD_GRAPH = Graph([1, 2, 3, 4, 5, 6, 7],
+    [(1, 2), (1, 3), (1, 4), (2, 4), (2, 6), (3, 4), (3, 5),
+    (3, 7), (4, 6), (4, 7), (5, 7), (6, 7)])
+greedy_labelling!(STD_GRAPH)
+spring_positions!(STD_GRAPH, width=5, height=5)
+
+export generate_spantree_question
+function generate_spantree_question(G::Graph=STD_GRAPH, range_on_tree=1:8, offset_range=1:1)
+    T, c = uniqueify_spantree(G)
+    
+    # Höchstens 100 Versuche
+    for i in 1:100 
+        # Es soll ein Basiselement geben, das teurer ist als ein
+        # Nichtbasiselement, damit die Aufgabe interessant ist
+        cost = x -> c[x[1], x[2]]
+		if maximum(cost(e) for e in T) > minimum(cost(e) for e in setdiff(G.E, T))
+            break
+        end
+
+        T = uniqueify_spantree(G)
+    end
+    
+    img_basic = graph_moodle(G, c)
+
+	# Richtige Antwort bauen
+    img_right = graph_moodle(G, c, highlight_edges = T)
+
+    answertext = MoodleText(
+        EmbedFile(img_right, width="10cm"),
+        MoodleQuiz.HTML,
+        [img_right]
+    )
+    answers = [Answer(answertext, Correct=1)]
+	
+	# Falsche Antworten hinzufügen
+	while(length(answers) < 4)
+		R = random_spantree(G)
+        if Set(T) != Set(R)
+            img_false = graph_moodle(G, c, highlight_edges = R)
+            
+            answertext = MoodleText(
+                EmbedFile(img_false, width="10cm"),
+                MoodleQuiz.HTML,
+                [img_false]
+            )
+            push!(answers, Answer(answertext, Correct=0))
+        end
+    end
+
+    text = MoodleText("""
+        <p>Welche der folgenden Spannbäume sind minimale Spannbäume im abgebildeten Graphen?</p>"
+        $(EmbedFile(img_basic, width="10cm"))
+        """,
+        MoodleQuiz.HTML,
+        [img_basic]
+    )
+    
+    q = Question(AllOrNothingMultipleChoice,
+        Name = "Mimaler Spannbaum",
+        Text = text,
+        Answers = answers
+    )
+
+	return q
+end
+
+function max_edge_in_path(G::Graph, c, s=1, t=-1; edges=G.E)
 	"""
 	Hilfsfunktion für `random_spantree`, im Prinzip eine DFS.
 	Findet das teuerste Gewicht auf dem (vorausgesetzt eindeutigen) s-t-Weg.
@@ -151,10 +216,10 @@ function max_edge_in_path(G::Graph, costs, s=1, t=-1; edges=G.E)
                 if j == t
 					# Wir setzen Eindeutigkeit des s-t-Wegs voraus,
 					# können also an dieser Stelle abbrechen
-                    return max(max_edge, G.c[i, j])
+                    return max(max_edge, c[i, j])
                 elseif (j ∉ path) || (s == t == j) # Keine Kreise außer s=t
                     push!(q, path ∪ [j])
-                    push!(max_edges, max(max_edge, G.c[i, j]))
+                    push!(max_edges, max(max_edge, c[i, j]))
                 end
             end
         end
@@ -202,7 +267,7 @@ function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
 end
 
 export generate_matroid_question
-function generate_matroid_question(M::Matroid; range_on_basis=1:8, offset_range=1:1)
+function generate_matroid_question(M::Matroid=STD_MATROID; range_on_basis=1:8, offset_range=1:1)
 	"""
 	Generiert Matroid-Frage im MoodleQuiz-Format
 	"""

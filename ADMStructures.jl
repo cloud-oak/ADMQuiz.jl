@@ -196,7 +196,7 @@ type Graph
 end
 
 export graph
-function graph(G; highlight_edges = [], marked_nodes = [])
+function graph(G, c; highlight_edges = [], marked_nodes = [])
 	hl = [Tuple(x) for x in highlight_edges]
 
 	nodes = join(["\\node[V$(i in marked_nodes ? ", marked" : "")] ($i) at $pos {\$$label\$};" for (i, pos, label) in zip(G.V, zip(G.positions[:,1], G.positions[:,2]), G.labels)], "\n")
@@ -210,16 +210,16 @@ function graph(G; highlight_edges = [], marked_nodes = [])
        eclass = "graph edge"
        hlclass = "very thick, red"
    end
-   edges = join(["\\draw[$((i, j) in hl ? hlclass : eclass)] ($i) -- ($j) node[midway, fill=white, circle, thin, inner sep=2pt] {\$$(G.c[i, j])\$};" for (i, j) in G.E], "\n")
+   edges = join(["\\draw[$((i, j) in hl ? hlclass : eclass)] ($i) -- ($j) node[midway, fill=white, circle, thin, inner sep=2pt] {\$$(c[i, j])\$};" for (i, j) in G.E], "\n")
     
    TikzPicture(string(nodes, edges), preamble=preamble, options="scale=2")
 end
 
 export graph_moodle
-function graph_moodle(G; highlight_edges = [], marked_nodes = [])
+function graph_moodle(G, c; highlight_edges = [], marked_nodes = [])
   TMP = tempname()
 
-  tp = graph(G, highlight_edges=highlight_edges, marked_nodes=marked_nodes)
+  tp = graph(G, c, highlight_edges=highlight_edges, marked_nodes=marked_nodes)
   save(SVG(TMP), tp)
   mf = MoodleFile("$TMP.svg")
   rm("$TMP.svg")
@@ -227,8 +227,8 @@ function graph_moodle(G; highlight_edges = [], marked_nodes = [])
 end
 
 export graph_svg
-function graph_svg(G)
-  save(SVG("tmp"), graph(G))
+function graph_svg(G, c)
+  save(SVG("tmp"), graph(G, c))
   svg = ""
   open("tmp.svg") do f
     svg = readstring(f)
@@ -398,11 +398,6 @@ export circles
       end
   end
   circles
-end
-
-export randomize_weights
-function randomize_weights(G, sample_from=1:10)
-  G.c = rand(sample_from, G.c)
 end
 
 export greedy_labelling!
