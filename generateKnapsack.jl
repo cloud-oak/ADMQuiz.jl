@@ -1,5 +1,6 @@
 #!/usr/bin/julia
-using ADMQuiz.Knapsack
+push!(LOAD_PATH, joinpath(dirname(@__FILE__), "ADMQuiz"))
+using Knapsack
 using MoodleQuiz
 using Tqdm
 

@@ -4,7 +4,7 @@ using Combinatorics
 using Memoize
 using MoodleQuiz
 
-preamble = readstring("tikzheader.tex")
+preamble = readstring(joinpath(dirname(@__FILE__), "res", "tikzheader.tex"))
 
 export powerset
 function powerset(x)
@@ -160,27 +160,16 @@ export Graph
 type Graph
 	V::Vector{Any}
 	E::Vector{Any}
-	c::AbstractMatrix
 	positions::AbstractMatrix
 	labels::Vector{AbstractString}
 	directed::Bool
-	function Graph(vertices, edges; c=false, positions=false, labels=false, directed=false)
+	function Graph(vertices, edges; positions=false, labels=false, directed=false)
 		this = new()
 		if vertices == []
 			vertices = unique([x for edge in edges for x in edge])
 		end
 		this.V = vertices
 		this.E = edges
-		if c == false
-			c = zeros(Int, length(vertices), length(vertices))
-			for (i, j) in edges
-				c[i, j] = 1
-				if directed == false
-					c[j, i] = 1
-				end
-			end
-		end
-		this.c = c
 		if positions == false
 			positions = spring_positions(this)
 		end
@@ -362,13 +351,7 @@ function build_mesh_graph(width, height)
   E = vcat([(i, i+1) for i in V if i % width != 0],
    [(i, i+width) for i in 1:(n-width)])
 
-  c = zeros(Int, n, n)
-  for (i, j) in E
-      c[i, j] = 1
-      c[j, i] = 1
-  end
-
-  return Graph(V, E, c=c, positions=positions, labels=labels)
+  return Graph(V, E, positions=positions, labels=labels)
 end
 
 export rank
@@ -422,3 +405,4 @@ function sp_labelling!(G::Graph)
 end
 
 end
+

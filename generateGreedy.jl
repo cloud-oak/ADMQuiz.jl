@@ -1,7 +1,6 @@
 #!/usr/bin/julia
-include("./ADMStructures.jl")
+push!(LOAD_PATH, joinpath(dirname(@__FILE__), "ADMQuiz"))
 using ADMStructures
-
 using Greedy
 using MoodleQuiz
 using Tqdm
@@ -24,31 +23,9 @@ set_string = x -> "{$(join(x, ", "))}" # Wandelt ein Array in das Format {1, 2, 
 questions = []
 
 for i in tqdm(1:NUM_EXCERCISES)
-    c, B = uniqueify_matroid!(M)
+	question = generate_matroid_question(M, range_on_basis=RANGE_ON_BASIS, offset_range=OFFSET_RANGE)
 
-    # Höchstens 100 Versuche
-    for i in 1:100 
-        # Es soll ein Basiselement geben, das teurer ist als ein
-        # Nichtbasiselement, damit die Aufgabe interessant ist
-        if any(any(c[k] < c[e] for k in setdiff(M.E, B)) for e in B)
-            break
-        end
-        c, B = uniqueify_matroid!(M)
-    end
-
-    solution = set_string(B) # Die richtige Lösung als String
-    
-    # Stack - ProblemResponseTree bauen
-    input = StackInput(AlgebraicInput, "ans1", solution, SyntaxHint="{1, 2, 3, ...}", SyntaxAttribute=1)
-    tree = PRTree()
-    node1 = PRTNode(tree, input, solution)
-
-    text = """<p>Finden Sie für das Matroid \$\\mathcal{M}\$ eine minimale Basis unter der Kostenfunktion \$c\$.</p>
-    $(repr_html(M))
-    $(EmbedInput(input))
-    """
-
-    push!(questions, Question(Stack, Name="Greedy-Algorithmus", Text=text, Inputs=[input], ProblemResponseTree=tree))
+	push!(questions, question)
 end
 
 quiz = Quiz(questions, Category="GreedyMatroid")  # Fragen -> Quiz

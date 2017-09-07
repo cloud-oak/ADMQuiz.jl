@@ -1,5 +1,5 @@
 module Greedy
-push!(LOAD_PATH, pwd())
+push!(LOAD_PATH, dirname(@__FILE__))
 
 using ADMStructures
 using MoodleQuiz
@@ -128,7 +128,7 @@ greedy_labelling!(STD_GRAPH)
 spring_positions!(STD_GRAPH, width=5, height=5)
 
 export generate_spantree_question
-function generate_spantree_question(G::Graph=STD_GRAPH, range_on_tree=1:8, offset_range=1:1)
+function generate_spantree_question(G::Graph=STD_GRAPH; range_on_tree=1:8, offset_range=1:1)
     T, c = uniqueify_spantree(G)
 
     # Höchstens 100 Versuche
@@ -140,7 +140,7 @@ function generate_spantree_question(G::Graph=STD_GRAPH, range_on_tree=1:8, offse
             break
         end
 
-        T = uniqueify_spantree(G)
+        T, c = uniqueify_spantree(G)
     end
  
     img_basic = graph_moodle(G, c)
@@ -254,14 +254,14 @@ function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
 		end
 
 		# Sicherstellen, dass Lösung eindeutig
-		_, unique = argmin(bases, by = (b -> sum(costs[e] for e in b)), return_uniq=true)
+		_, unique = argmin(bases(m), by = (b -> sum(costs[e] for e in b)), return_uniq=true)
 		if unique
 			return costs, B
 		end
 	end
 	# Hartnäckiger Fall... Wir ziehen uns zurück auf Satz 2.11, injektive Kostenfunktion
 	costs = Dict(zip(m.E, randperm(length(m.E))))
-	B = argmin(bases, by = (b -> sum(costs[e] for e in b)))
+	B = argmin(bases(m), by = (b -> sum(costs[e] for e in b)))
 
 	return costs, B
 end
