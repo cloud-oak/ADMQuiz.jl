@@ -204,29 +204,47 @@ export all_paths
 """
 A DFS that returns all s-t-Paths and their lengths
 """
-function all_paths(G::Graph, c, s=1, t=-1)
+function all_paths(G::Graph; c=nothing, s=1, t=-1)
+    has_costs = c isa Dict
+
     if t == -1
         t = G.V[end]
     end
+    if s == -1
+        s = G.V[end]
+    end
 
     q = [[s]]
-    costs = [0]
+    if has_costs
+        costs = [0]
+    end
 
     paths = []
 
     count = 0
     while !isempty(q)
         path = pop!(q)
-        cost = pop!(costs)
+        if has_costs
+            cost = pop!(costs)
+        end
         last = path[end]
 
         for (i, j) in G.E
+            if (!G.directed && j == last)
+                i, j = j, i
+            end
             if i == last
                 if j == t
-                    push!(paths, (path ∪ [t], cost + c[i, j]))
-                elseif (j ∉ path) || (s == t == j) # Keine Kreise außer s=t
+                    if has_costs
+                        push!(paths, (vcat(path, [t]), cost + c[i, j]))
+                    else
+                        push!(paths, vcat(path, [t]))
+                    end
+                elseif (j ∉ path)
                     push!(q, path ∪ [j])
-                    push!(costs, cost + c[i, j])
+                    if has_costs
+                        push!(costs, cost + c[i, j])
+                    end
                 end
             end
         end
@@ -235,7 +253,14 @@ function all_paths(G::Graph, c, s=1, t=-1)
 end
 
 export reachable
-function reachable(G::Graph, s, t)::Bool
+function reachable(G::Graph, s=1, t=-1)::Bool
+    if t == -1
+        t = G.V[end]
+    end
+    if s == -1
+        s = G.V[end]
+    end
+
     connected = Set([s])
     changed = true
     while changed

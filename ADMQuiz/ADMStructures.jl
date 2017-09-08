@@ -185,7 +185,9 @@ type Graph
 end
 
 export graph
-function graph(G, c; highlight_edges = [], marked_nodes = [])
+function graph(G, c=nothing; highlight_edges = [], marked_nodes = [], bend="auto")
+    has_c = !(c isa Void)
+
 	hl = [Tuple(x) for x in highlight_edges]
 
 	nodes = join(["\\node[V$(i in marked_nodes ? ", marked" : "")] ($i) at $pos {\$$label\$};" for (i, pos, label) in zip(G.V, zip(G.positions[:,1], G.positions[:,2]), G.labels)], "\n")
@@ -203,10 +205,15 @@ function graph(G, c; highlight_edges = [], marked_nodes = [])
     edgestrings = []
     for e in G.E
         i, j = e
+        currentbend = bend
+        if bend == "auto"
+            d = norm(G.positions[i,:] - G.positions[j,:])
+            currentbend = 90 - acosd(4*d / (d*d + 4))
+        end
         edge = string(
             "\\draw[$((i, j) in hl ? hlclass : eclass)] ($i) to",
-            G.directed && ((j, i) in G.E) ? "[bend right=20]" : "",
-            " node[midway, fill=white, circle, thin, inner sep=2pt] {\$$(c[i, j])\$} ($j);")
+            G.directed && ((j, i) in G.E) ? "[bend right=$(bend)]" : "",
+            has_c ? " node[midway, fill=white, circle, thin, inner sep=2pt] {\$$(c[i, j])\$} ($j);" : "($j);")
         push!(edgestrings, edge)
     end
     edges = join(edgestrings,"\n")
@@ -403,12 +410,12 @@ function greedy_labelling!(G::Graph)
 end
 
 export sp_labelling!
+"""
+Labels the vertices so that it is useful for shortest paths.
+The first vertex is labelled "s", the last vertex "t".
+All other vertices are labelled "v_i"
+"""
 function sp_labelling!(G::Graph)
-    """
-    Labels the vertices so that it is useful for shortest paths.
-    The first vertex is labelled "s", the last vertex "t".
-    All other vertices are labelled "v_i"
-    """
     G.labels = ["v_{$(i-1)}" for (i, v) in enumerate(G.V)]
     G.labels[1] = "s"
     G.labels[end] = "t"
