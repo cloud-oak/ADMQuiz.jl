@@ -188,22 +188,17 @@ type Graph
 end
 
 export graph
-function graph(G, c=nothing; highlight_edges = [], marked_nodes = [], bend="auto")
+function graph(G, c=nothing; highlight_edges = [], marked_nodes = [], bend="auto",
+        edge_attr = (G.directed ? "graph path" : "graph edge"),
+        edge_label_attr = "fill=white, circle, thin, inner sep=2pt"
+    )
     has_c = !(c isa Void)
 
-	hl = [Tuple(x) for x in highlight_edges]
+    hl = [Tuple(x) for x in highlight_edges]
+    nodes = join(["\\node[V$(i in marked_nodes ? ", marked" : "")] ($i) at $pos {\$$label\$};" for (i, pos, label) in zip(G.V, zip(G.positions[:,1], G.positions[:,2]), G.labels)], "\n")
 
-	nodes = join(["\\node[V$(i in marked_nodes ? ", marked" : "")] ($i) at $pos {\$$label\$};" for (i, pos, label) in zip(G.V, zip(G.positions[:,1], G.positions[:,2]), G.labels)], "\n")
-
-    eclass = ""
-    hlclass = ""
-    if G.directed
-        eclass = "graph path"
-        hlclass = "graph path, red"
-    else
-        eclass = "graph edge"
-        hlclass = "very thick, red"
-    end
+    eclass = edge_attr
+    hlclass = string(eclass, ", red")
     
     edgestrings = []
     for e in G.E
@@ -211,12 +206,13 @@ function graph(G, c=nothing; highlight_edges = [], marked_nodes = [], bend="auto
         currentbend = bend
         if bend == "auto"
             d = norm(G.positions[i,:] - G.positions[j,:])
-            currentbend = 90 - acosd(4*d / (d*d + 4))
+            bend_dist = 0.15
+            currentbend = 90 - acosd((4*bend_dist*d) / (d*d + 4*bend_dist))
         end
         edge = string(
             "\\draw[$((i, j) in hl ? hlclass : eclass)] ($i) to",
-            G.directed && ((j, i) in G.E) ? "[bend right=$(bend)]" : "",
-            has_c ? " node[midway, fill=white, circle, thin, inner sep=2pt] {\$$(c[i, j])\$} ($j);" : "($j);")
+            G.directed && ((j, i) in G.E) ? "[bend right=$(currentbend)]" : "",
+            has_c ? " node[midway, $(edge_label_attr)] {\$$(c[i, j])\$} ($j);" : "($j);")
         push!(edgestrings, edge)
     end
     edges = join(edgestrings,"\n")

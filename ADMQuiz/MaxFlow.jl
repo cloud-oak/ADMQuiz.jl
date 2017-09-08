@@ -158,6 +158,7 @@ function generateMaxFlowQuestion(G::Graph; flow_value=5, rand_range=1:5)
         answer_vectors.
     end
         
+    # TODO
     vector_answer = VectorEmbeddedAnswer(
         [new_dist[v] for v in G.V],
         labels=G.labels
