@@ -310,8 +310,8 @@ function generateOnestepDijkstraQuestion(G::Graph; range_on_tree=1:8, offset_ran
         end
 
         G.labels = ["$l : $(dist[v] == Inf ? "\\infty" : dist[v])" for (l, v) in zip(G.labels, G.V)]
-        sp_labelling!(G)
         dijkstra_img = graph_moodle(G, c, marked_nodes=visited)
+        sp_labelling!(G)
 
         vector_answer = VectorEmbeddedAnswer(
             [new_dist[v] for v in G.V],

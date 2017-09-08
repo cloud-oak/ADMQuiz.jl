@@ -1,5 +1,7 @@
 module MaxFlow
 push!(LOAD_PATH, dirname(@__FILE__))
+push!(LOAD_PATH, dirname(dirname(@__FILE__)))
+
 
 using ADMStructures
 using ShortestPaths
@@ -26,64 +28,151 @@ function has_circle(G::Graph, exclude_whirls=true)
 end
 
 export uniqueify_network
-function uniqueify_network(G::Graph, flow_value=5, rand_range=1:5)
+function uniqueify_network(proto::Graph, flow_value=5, rand_range=1:5)
+    # Schritt 1: Generiere einen kreisfreien Fluss, Grundvoraussetzung für ein kreisfreies N_f
+    circ = true
 
-end
+    flow = zeros(length(proto.E))
+    fmin = zeros(length(proto.E))
+    fmax = zeros(length(proto.E))
 
-export generateOnestepDijkstraQuestion
-function generateOnestepDijkstraQuestion(G::Graph; range_on_tree=1:8, offset_range=1:1, minsteps=2, maxleft=3, max_iterations=100)
-    allowed_depths = collect(minsteps:(length(G.V) - maxleft))
-    ambiguous = true
+    while circ
+        fmin = zeros(length(proto.E)) # untere Grenze für `flow` = -c((w, v))
+        fmax = zeros(length(proto.E)) #  obere Grenze für `flow` =  c((v, w))
+        
+        e2i = Dict(e => i for (i, e) in enumerate(proto.E)) # Kante -> Index
+        i2e = Dict(i => e for (i, e) in enumerate(proto.E)) # Index -> Kante
 
-    while ambiguous
-        T, c, dist = unique_shortestpaths(G, range_on_tree=range_on_tree, offset_range=offset_range, dijkstra_fail=false)
-        dist, rating, visited = rating_dijkstra(G, c, depth=rand(allowed_depths))
+        s = proto.V[1] 
+        t = proto.V[end]
+        single_flows = rand(all_paths(proto), flow_val) # Fluss als Summe von n Wegen
 
-        next_node, next_uniq = argmin(setdiff(G.V, visited), by=dist, return_uniq=true)
-
-        if !next_uniq
-            continue
-        else
-            amiguous = false
-        end
-
-        num_changed = 0
-        num_left = 0 
-
-        new_dist = deepcopy(dist)
-
-        for (i, v) in G.E
-            if i == next_node
-                if dist[v] <= dist[i] + c[i, v]
-                    num_left += 1
-                elseif dist[v] > dist[i] + c[i, v]
-                    num_changed += 1
-                    new_dist[v] = dist[i] + c[i, v]
+        for f in single_flows
+            for (v, w) in zip(f[1:end-1], f[2:end])
+                if (v, w) in proto.E
+                    flow[e2i[(v, w)]] += 1 # Fluss für v->w positiv
+                    fmin[e2i[(v, w)]] -= 1 # Augmentationsnetzwerk bekommt rückwärts +1 Kapazität
+                elseif (w, v) in proto.E
+                    flow[e2i[(w, v)]] -= 1 # Fluss für v->w negativ
+                    fmax[e2i[(w, v)]] += 1 # Augmentationsnetzwerk bekommt vorwärts +1 Kapazität
                 end
             end
         end
+        
+        G = deepcopy(proto)
+        G.directed = true
+        G.E = []
 
-        G.labels = ["$l : $(dist[v] == Inf ? "\\infty" : dist[v])" for (l, v) in zip(G.labels, G.V)]
-        sp_labelling!(G)
-        dijkstra_img = graph_moodle(G, c, marked_nodes=visited)
+        for (i, val) in enumerate(flow)
+            v, w = i2e[i]
+            if fmax[i] > 0
+                push!(G.E, (v, w))
+                fmax[i] += rand(rand_range)
+            end
+            if fmin[i] < 0
+                push!(G.E, (w, v))
+                fmin[i] -= rand(rand_range)
+            end
+        end
 
-        vector_answer = VectorEmbeddedAnswer(
-            [new_dist[v] for v in G.V],
-            labels=G.labels
-        )
-
-        return Question(EmbeddedAnswers,
-            Name="Dijkstra Einzelschritt",
-            Text=MoodleText("""
-                Führen Sie im unten abgebildeten Graphen eine Iteration des Dijkstra-Algorithmus aus.
-                (Geben Sie dabei den Wert \\(\\infty\\) als 'inf' ein.)
-                <br />
-                $(EmbedFile(dijkstra_img, width="12cm", height="8cm"))<br />
-                $vector_answer
-                """,
-                MoodleQuiz.HTML, [dijkstra_img])
-            )
+        if !has_circle(G)
+            circ = false
+        end
     end
+    
+    # Schritt 2: Füge Kanten zu N_f hinzu, die
+    #   1. Keinen s-t-Weg in N_f schließen
+    #   2. Keinen Kreis in N_f schließen
+    for e in random_order(proto.E)
+        i, j = e
+        if !((i, j) in G.E)
+            push!(G.E, (i, j)) # Füge e hinzu
+            if reachable(G, s, t) || has_circle(G)
+                pop!(G.E) # Lösche es wieder, wenn es Kreis oder s-t-Weg schließt
+            else
+                assert(fmax[e2i[e]] == 0) # nichts überschreiben
+                fmax[e2i[e]] = rand(rand_range)
+            end
+        end
+        if !((j, i) in G.E)
+            push!(G.E, (j, i)) # Füge -e hinzu
+            if reachable(G, s, t) || has_circle(G)
+                pop!(G.E) # Lösche es wieder, wenn es Kreis oder s-t-Weg schließt
+            else
+                assert(fmin[e2i[e]] == 0) # nichts überschreiben
+                fmin[e2i[e]] = -rand(rand_range)
+            end
+        end
+    end
+
+    # Deaugmentierung:
+    fmin += flow
+    fmax += flow
+
+    N = deepcopy(proto)
+    N.directed = true
+    N.E = []
+    c = zeros(Int64, length(G.V), length(G.V))
+    for (i, e) in enumerate(proto.E)
+        v, w = e
+        if fmax[i] > 0
+            push!(N.E, (v, w))
+            c[v, w] = fmax[i]
+        end
+        if fmin[i] < 0
+            push!(N.E, (w, v))
+            c[w, v] = -fmin[i]
+        end
+    end
+
+    f = Dict{Tuple, Int64}()
+
+    for (v, w) in N.E
+        if (v, w) in keys(e2i)
+            val = flow[e2i[(v, w)]]
+            f[(v, w)] = max(0, val)
+        elseif (w, v) in keys(e2i)
+            val = -flow[e2i[(w, v)]]
+            f[(v, w)] = max(0, val)
+        end
+    end
+
+    return N, c, f
+end
+
+export generateMaxFlowQuestion
+function generateMaxFlowQuestion(G::Graph; flow_value=5, rand_range=1:5)
+    N, c, f = uniqueify_network(G, flow_value=rand_range, rand_range=rand_range)
+
+    img = graph_moodle(G, c, edge_label_attr="flowlabel")
+    
+    answer_vectors = []
+    ENTRIES_PER_ROW = 12
+    idx = 0
+
+    solution = collect(f)
+    sort!(solution, by=(x -> 1000 * sum(x[1]) + 10 * minimum(x[1]) + x[1][1]))
+    labels = ["\$$(N.labels[e[1]]) \\to $(N.labels[e[2]])\$" for e, _ in solution]
+    values = [Int(i) for _, i in solution]
+    while idx * ENTRIES_PER_ROW <= length(solution)
+        answer_vectors.
+    end
+        
+    vector_answer = VectorEmbeddedAnswer(
+        [new_dist[v] for v in G.V],
+        labels=G.labels
+    )
+
+    return Question(EmbeddedAnswers,
+        Name="Max Flow",
+        Text=MoodleText("""
+            Finden sie einen maximalen Fluss im abgebildeten Netzwerk.
+            <br />
+            $(EmbedFile(img, width="16cm"))<br />
+            $vector_answer
+            """,
+            MoodleQuiz.HTML, [dijkstra_img])
+        )
 end
 
 end
