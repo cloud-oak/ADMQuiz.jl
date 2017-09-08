@@ -63,9 +63,6 @@ function Matroid(;bases=[], costs=[])
 	E = reduce(union, Set(), bases)
 	sort!(E)
 	I = reduce(union, Set(), [powerset(b) for b in bases])
-	for i in I
-		sort!(i)
-	end
 	sort!(I, lt=setlt)
 	return Matroid(E, I)
 end
