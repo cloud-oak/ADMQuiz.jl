@@ -3,8 +3,8 @@ julia:
   - nightly
   - 0.6
 before_install:
-  - apt-get -qq update
-  - apt-get install -y texlive-latex-base texlive-binaries pdf2svg
+  - sudo apt-get -qq update
+  - sudo apt-get install -y texlive-latex-base texlive-binaries pdf2svg
 script:
   - julia generateGreedy.jl
   - julia generateSpantree.jl
