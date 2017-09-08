@@ -11,7 +11,6 @@ RANGE_ON_TREE   = 1:8     # Zufallsbereich für Elemente der Basis
 OFFSET_RANGE    = 1:1     # Zufallsbereich, für die Verteuerung von Elementen außerhalb der Basis
 
 # Der Graph auf dem die Aufgaben generiert werden
-G = build_mesh_graph(2, 3)
 G = Graph([1, 2, 3, 4, 5, 6, 7],
     [(1, 2), (1, 3), (1, 4), (2, 4), (2, 6), (3, 4), (3, 5),
     (3, 7), (4, 6), (4, 7), (5, 7), (6, 7)])
