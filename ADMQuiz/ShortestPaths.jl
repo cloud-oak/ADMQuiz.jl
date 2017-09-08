@@ -348,7 +348,7 @@ function generateDijkstraQuestion(G::Graph; mode::Mode=None, range_on_tree=1:8, 
         T, c, label = uunique_shortestpaths(G, dijkstra_fail=false, range_on_tree=range_on_tree, offset_range=offset_range)
     end
 
-    paths = all_paths(G, c)
+    paths = all_paths(G, c=c)
     dist  = minimum(c for (p, c) in paths)
     correct_paths = [p for (p, c) in paths if c == dist]
     false_paths   = [p for (p, c) in paths if c != dist]
