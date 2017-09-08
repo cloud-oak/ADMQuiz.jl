@@ -1,5 +1,7 @@
 #!/usr/bin/julia
 push!(LOAD_PATH, joinpath(dirname(@__FILE__), "ADMQuiz"))
+push!(LOAD_PATH, dirname(dirname(@__FILE__)))
+
 using ADMStructures
 using Greedy
 using MoodleQuiz
