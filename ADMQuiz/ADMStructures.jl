@@ -190,18 +190,28 @@ function graph(G, c; highlight_edges = [], marked_nodes = [])
 
 	nodes = join(["\\node[V$(i in marked_nodes ? ", marked" : "")] ($i) at $pos {\$$label\$};" for (i, pos, label) in zip(G.V, zip(G.positions[:,1], G.positions[:,2]), G.labels)], "\n")
 
-   eclass = ""
-   hlclass = ""
-   if G.directed
-       eclass = "graph path"
-       hlclass = "graph path, red"
-   else
-       eclass = "graph edge"
-       hlclass = "very thick, red"
-   end
-   edges = join(["\\draw[$((i, j) in hl ? hlclass : eclass)] ($i) -- ($j) node[midway, fill=white, circle, thin, inner sep=2pt] {\$$(c[i, j])\$};" for (i, j) in G.E], "\n")
+    eclass = ""
+    hlclass = ""
+    if G.directed
+        eclass = "graph path"
+        hlclass = "graph path, red"
+    else
+        eclass = "graph edge"
+        hlclass = "very thick, red"
+    end
     
-   TikzPicture(string(nodes, edges), preamble=preamble, options="scale=2")
+    edgestrings = []
+    for e in G.E
+        i, j = e
+        edge = string(
+            "\\draw[$((i, j) in hl ? hlclass : eclass)] ($i) to",
+            G.directed && ((j, i) in G.E) ? "[bend right=20]" : "",
+            " node[midway, fill=white, circle, thin, inner sep=2pt] {\$$(c[i, j])\$} ($j);")
+        push!(edgestrings, edge)
+    end
+    edges = join(edgestrings,"\n")
+    
+    TikzPicture(string(nodes, edges), preamble=preamble, options="scale=2")
 end
 
 export graph_moodle
@@ -405,4 +415,5 @@ function sp_labelling!(G::Graph)
 end
 
 end
+
 
