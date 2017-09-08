@@ -4,7 +4,7 @@ julia:
   - 0.6
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-binaries pdf2svg
+  - sudo apt-get install -y texlive-full texlive-binaries pdf2svg
   - julia -e 'for p in ["TikzPictures", "Memoize", "LightXML", "Combinatorics"] Pkg.add(p) end'
 script:
   - julia generateGreedy.jl
