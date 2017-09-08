@@ -5,7 +5,7 @@ julia:
 before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -y texlive-latex-base texlive-binaries pdf2svg
-  - julia -e 'Pkg.add("TikzPictures"); Pkg.add("Memoize"); Pkg.add("Combinatorics")'
+  - julia -e 'for p in ["TikzPictures", "Memoize", "LightXML", "Combinatorics"] Pkg.add(p) end'
 script:
   - julia generateGreedy.jl
   - julia generateSpantree.jl
