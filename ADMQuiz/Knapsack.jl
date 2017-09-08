@@ -1,4 +1,7 @@
 module Knapsack
+push!(LOAD_PATH, dirname(@__FILE__))
+push!(LOAD_PATH, dirname(dirname(@__FILE__)))
+
 using Memoize
 using MoodleQuiz
 

@@ -1,6 +1,9 @@
 # Copied from Fabian's old implementation
 module MoodleTools
 
+push!(LOAD_PATH, dirname(@__FILE__))
+push!(LOAD_PATH, dirname(dirname(@__FILE__)))
+
 using MoodleQuiz
 
 export VectorEmbeddedAnswer

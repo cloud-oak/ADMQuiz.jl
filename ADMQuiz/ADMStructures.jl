@@ -2,7 +2,6 @@ module ADMStructures
 using TikzPictures
 using Combinatorics
 using Memoize
-using MoodleQuiz
 
 preamble = readstring(joinpath(dirname(@__FILE__), "res", "tikzheader.tex"))
 
