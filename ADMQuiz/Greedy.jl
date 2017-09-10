@@ -7,11 +7,11 @@ using MoodleQuiz
 
 # TODO: maybe move Partition to ADMStructures?
 export Partition
+"""
+Disjoint-Set structure für Kruskal
+See https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+"""
 type Partition
-    """
-    Disjoint-Set structure für Kruskal
-    See https://en.wikipedia.org/wiki/Disjoint-set_data_structure
-    """
     parent::Dict
     _component::Dict
     component::Function
@@ -59,10 +59,10 @@ function partition_union(self::Partition, x, y)
 end
 
 export kruskal
+"""
+Algorithmus von Kruskal
+"""
 function kruskal(G, c; break_on_unique=false, min_depth=Inf)
-    """
-    Kruskals Algorithmus
-    """
     E = G.E
     V = G.V
     cost = (e -> c[e[1], e[2]])

@@ -63,6 +63,9 @@ function Matroid(;bases=[], costs=[])
 	E = reduce(union, Set(), bases)
 	sort!(E)
 	I = reduce(union, Set(), [powerset(b) for b in bases])
+	for i in I
+		sort!(i)
+	end
 	sort!(I, lt=setlt)
 	return Matroid(E, I)
 end
@@ -218,10 +221,10 @@ function graph(G, c=nothing; highlight_edges = [], marked_nodes = [], bend="auto
 end
 
 export graph_moodle
-function graph_moodle(G, c; highlight_edges = [], marked_nodes = [])
+function graph_moodle(args...; kwargs...)
   TMP = tempname()
 
-  tp = graph(G, c, highlight_edges=highlight_edges, marked_nodes=marked_nodes)
+  tp = graph(args...; kwargs...)
   save(SVG(TMP), tp)
   mf = MoodleFile("$TMP.svg")
   rm("$TMP.svg")
@@ -229,8 +232,8 @@ function graph_moodle(G, c; highlight_edges = [], marked_nodes = [])
 end
 
 export graph_svg
-function graph_svg(G, c)
-  save(SVG("tmp"), graph(G, c))
+function graph_svg(args...; kwargs...)
+  save(SVG("tmp"), graph(args...; kwargs...))
   svg = ""
   open("tmp.svg") do f
     svg = readstring(f)
