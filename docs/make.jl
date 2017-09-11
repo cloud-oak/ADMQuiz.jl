@@ -14,5 +14,5 @@ makedocs(
 )
 
 deploydocs(
-    repo   = "github.com/cloud-oak/ADMQuiz.git",
+    repo   = "github.com/cloud-oak/ADMQuiz.jl.git",
 )

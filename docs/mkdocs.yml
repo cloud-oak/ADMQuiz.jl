@@ -1,5 +1,5 @@
 site_name:        ADMQuiz.jl
-repo_url:         https://github.com/cloud-oak/ADMQuiz.jl
+repo_url:         https://github.com/cloud-oak/ADMQuiz.git.jl
 site_description: Generate Moodle Quiz for ADM
 site_author:      Konrad Heidler
 
