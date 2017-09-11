@@ -174,7 +174,7 @@ function generate_spantree_question(G::Graph=STD_GRAPH; range_on_tree=1:8, offse
     text = MoodleText("""
         <!-- Set overflow-x to `scroll` to be at least somewhat mobile-friendly -->
         <div style="overflow-x: auto;">
-        <p>Welche der folgenden Spannbäume sind minimale Spannbäume im abgebildeten Graphen?</p>"
+        <p>Welche der folgenden Spannbäume sind minimale Spannbäume im abgebildeten Graphen?</p>
         $(EmbedFile(img_basic, width="10cm"))
         </div>
         """,
