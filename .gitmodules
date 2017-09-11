@@ -1,6 +1,6 @@
-[submodule "Tqdm.jl"]
-	path = Tqdm.jl
-	url = https://github.com/cloud-oak/Tqdm.jl
 [submodule "MoodleQuiz"]
 	path = MoodleQuiz
 	url = https://github.com/cloud-oak/MoodleQuiz
+[submodule "Tqdm.jl"]
+	path = Tqdm.jl
+	url = https://github.com/cloud-oak/Tqdm.jl

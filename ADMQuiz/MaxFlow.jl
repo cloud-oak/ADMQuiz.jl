@@ -17,7 +17,7 @@ function has_circle(G::Graph, exclude_whirls=true)
     for v in G.V
         paths = all_paths(G, s=v, t=v)
         if exclude_whirls
-            if any(length(p) > 3 for p in paths)
+            if any(l > 2 for p, l in paths)
                 return true
             end
         elseif length(paths) > 0
