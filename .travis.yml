@@ -12,6 +12,7 @@ script:
   - julia generateDijkstraOnestep.jl
   - julia generateDijkstraFull.jl
   - julia generateKnapsack.jl
+  - julia generateMaxFlow.jl
 after_success:
   - julia -e 'Pkg.add("Documenter")'
   - julia docs/make.jl
