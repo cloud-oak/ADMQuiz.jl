@@ -299,7 +299,7 @@ function generate_matroid_question(M::Matroid=STD_MATROID; range_on_basis=1:8, o
     <!-- Set overflow-x to `scroll` to be at least somewhat mobile-friendly -->
     <div style="overflow-x: auto;">
     <p>Finden Sie für das Matroid \$\\mathcal{M}\$ eine minimale Basis unter der Kostenfunktion \$c\$.</p>
-    $(repr_html(M))
+    $(repr_html(M, c))
     $(EmbedInput(input))
     </div>
     """
