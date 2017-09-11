@@ -98,7 +98,10 @@ function generate_knapsack_question(;m=5, c=10, weight_range=1:10, profit_range=
 
     len = length(w)
     
-    text = """<div>Lösen Sie das folgende Knapsack-Problem mit einer Gewichtsoberschranke von \$$(c)\$</div>
+    text = """
+    <!-- Set overflow-x to `scroll` to be at least somewhat mobile-friendly -->
+    <div style="overflow-x: auto;">
+    <div>Lösen Sie das folgende Knapsack-Problem mit einer Gewichtsoberschranke von \$$(c)\$</div>
         \$\$
         \\begin{array}{l|$(repeat("c", len))}
             &$(join(1:len, "&")) \\\\
@@ -108,7 +111,8 @@ function generate_knapsack_question(;m=5, c=10, weight_range=1:10, profit_range=
         \\end{array}
         \$\$
         $(EmbedInput(input))
-        """
+    </div>
+    """
     
     return Question(Stack, Name="Knapsack",
         Text = text,

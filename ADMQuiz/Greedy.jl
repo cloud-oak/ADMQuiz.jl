@@ -172,8 +172,11 @@ function generate_spantree_question(G::Graph=STD_GRAPH; range_on_tree=1:8, offse
     end
 
     text = MoodleText("""
+        <!-- Set overflow-x to `scroll` to be at least somewhat mobile-friendly -->
+        <div style="overflow-x: auto;">
         <p>Welche der folgenden Spannbäume sind minimale Spannbäume im abgebildeten Graphen?</p>"
         $(EmbedFile(img_basic, width="10cm"))
+        </div>
         """,
         MoodleQuiz.HTML,
         [img_basic]
@@ -292,9 +295,13 @@ function generate_matroid_question(M::Matroid=STD_MATROID; range_on_basis=1:8, o
     tree = PRTree()
     node1 = PRTNode(tree, input, solution)
 
-    text = """<p>Finden Sie für das Matroid \$\\mathcal{M}\$ eine minimale Basis unter der Kostenfunktion \$c\$.</p>
+    text = """
+    <!-- Set overflow-x to `scroll` to be at least somewhat mobile-friendly -->
+    <div style="overflow-x: auto;">
+    <p>Finden Sie für das Matroid \$\\mathcal{M}\$ eine minimale Basis unter der Kostenfunktion \$c\$.</p>
     $(repr_html(M))
     $(EmbedInput(input))
+    </div>
     """
 
 	return Question(Stack, Name="Greedy-Algorithmus",

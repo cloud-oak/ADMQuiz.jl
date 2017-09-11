@@ -206,7 +206,9 @@ export all_paths
 A DFS that returns all s-t-Paths and their lengths
 """
 function all_paths(G::Graph; c=nothing, s=1, t=-1)
-    has_costs = c isa Dict
+    if c isa Void
+        c = Dict(e => 1 for e in G.E)
+    end
 
     if t == -1
         t = G.V[end]
@@ -216,18 +218,14 @@ function all_paths(G::Graph; c=nothing, s=1, t=-1)
     end
 
     q = [[s]]
-    if has_costs
-        costs = [0]
-    end
+    costs = [0]
 
     paths = []
 
     count = 0
     while !isempty(q)
         path = pop!(q)
-        if has_costs
-            cost = pop!(costs)
-        end
+        cost = pop!(costs)
         last = path[end]
 
         for (i, j) in G.E
@@ -236,16 +234,10 @@ function all_paths(G::Graph; c=nothing, s=1, t=-1)
             end
             if i == last
                 if j == t
-                    if has_costs
-                        push!(paths, (vcat(path, [t]), cost + c[i, j]))
-                    else
-                        push!(paths, vcat(path, [t]))
-                    end
+                    push!(paths, (vcat(path, [t]), cost + c[i, j]))
                 elseif (j ∉ path)
                     push!(q, path ∪ [j])
-                    if has_costs
-                        push!(costs, cost + c[i, j])
-                    end
+                    push!(costs, cost + c[i, j])
                 end
             end
         end
@@ -321,11 +313,14 @@ function generateOnestepDijkstraQuestion(G::Graph; range_on_tree=1:8, offset_ran
         return Question(EmbeddedAnswers,
             Name="Dijkstra Einzelschritt",
             Text=MoodleText("""
+                <!-- Set overflow-x to `scroll` to be at least somewhat mobile-friendly -->
+                <div style="overflow-x: auto;">
                 Führen Sie im unten abgebildeten Graphen eine Iteration des Dijkstra-Algorithmus aus.
                 (Geben Sie dabei den Wert \\(\\infty\\) als 'inf' ein.)
                 <br />
                 $(EmbedFile(dijkstra_img, width="12cm", height="8cm"))<br />
                 $vector_answer
+                </div>
                 """,
                 MoodleQuiz.HTML, [dijkstra_img])
             )
@@ -349,6 +344,7 @@ function generateDijkstraQuestion(G::Graph; mode::Mode=None, range_on_tree=1:8, 
     end
 
     paths = all_paths(G, c=c)
+
     dist  = minimum(c for (p, c) in paths)
     correct_paths = [p for (p, c) in paths if c == dist]
     false_paths   = [p for (p, c) in paths if c != dist]
@@ -385,7 +381,9 @@ function generateDijkstraQuestion(G::Graph; mode::Mode=None, range_on_tree=1:8, 
     return(Question(MultipleChoice,
             Name = "Kürzeste Wege",
             Text = MoodleText(
-                join([text, EmbedFile(img, width="18cm")], "<br />\n"),
+                join(["""<!-- Set overflow-x to `scroll` to be at least somewhat mobile-friendly -->
+                      <div style="overflow-x: auto;">""",
+                      text, EmbedFile(img, width="18cm"), "</div>"], "<br />\n"),
                 MoodleQuiz.HTML, [img]
             ),
             Answers = answers

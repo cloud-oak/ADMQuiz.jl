@@ -163,10 +163,13 @@ function generate_maxflow_question(G::Graph; flow_value=5, rand_range=1:5)
     return Question(EmbeddedAnswers,
         Name="Max Flow",
         Text=MoodleText("""
+            <!-- Set overflow-x to `scroll` to be at least somewhat mobile-friendly -->
+            <div style="overflow-x: auto;">
             Finden sie mithilfe des Ford-Fulkerson-Algorithmus einen maximalen Fluss im abgebildeten Netzwerk.
             <br />
             $(EmbedFile(img, width="16cm"))<br />
             $vector_answer
+            </div>
             """,
             MoodleQuiz.HTML, [img])
         )
