@@ -23,6 +23,8 @@ questions = []
     
 for i in tqdm(1:NUM_EXCERCISES)
     q = generateDijkstraQuestion(G, mode=MODE, range_on_tree=RANGE_ON_TREE, offset_range=OFFSET_RANGE, minsteps=2, maxleft=3, max_iterations=20)
+
+    push!(questions, q)
 end
 
 quiz = Quiz(questions, "DijkstraFull")
