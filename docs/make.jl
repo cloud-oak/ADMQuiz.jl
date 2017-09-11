@@ -1,3 +1,5 @@
+ENV["DOCUMENTER_DEBUG"] = true;
+
 push!(LOAD_PATH, joinpath(dirname(dirname(@__FILE__)), "ADMQuiz"))
 using Documenter, ADMStructures, ShortestPaths, Greedy, Knapsack, MaxFlow
 
