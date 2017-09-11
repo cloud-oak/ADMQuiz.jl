@@ -207,7 +207,7 @@ A DFS that returns all s-t-Paths and their lengths
 """
 function all_paths(G::Graph; c=nothing, s=1, t=-1)
     if c isa Void
-        c = Dict(e => 1 for e in G.E)
+        c = ones(Int64, length(G.V), length(G.V))
     end
 
     if t == -1
