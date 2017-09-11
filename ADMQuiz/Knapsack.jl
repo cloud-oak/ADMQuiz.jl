@@ -5,11 +5,11 @@ push!(LOAD_PATH, dirname(dirname(@__FILE__)))
 using Memoize
 using MoodleQuiz
 
+"""
+Entzippt eine Liste von Tupeln. Umkehrfunktion von `zip`.
+Implementierung angepasst von [diesem Github Issue](https://github.com/JuliaLang/julia/issues/13942).
+"""
 function unzip(zipped)
-	"""
-	Unzips a list of tuples. Adapted from
-	https://github.com/JuliaLang/julia/issues/13942
-	"""
 	n = length(zipped)
 	m = length(first(zipped))
 	vectors = [Vector(n) for _ in 1:m]
@@ -22,6 +22,10 @@ function unzip(zipped)
 end
 
 export alpha
+"""
+Die ``\\alpha``-Funktion des Knapsack-Algorithmus. Memoisiert, um dynamische Optimierung zu implementieren.
+Gibt nicht nur den Nutzen, sondern auch die bisher verwendeten Objekte und den in der Arbeit beschriebenen ``\\gamma``-Wert zurück.
+"""
 @memoize function alpha(j, w, c, profits, weights)
 	if j <= 0
 		if w == 0
@@ -46,9 +50,21 @@ export alpha
 	end
 end
 
-set_string = x -> "{$(join(x, ", "))}" # Wandelt ein Array in das Format {1, 2, 3, ...} um
+export set_string
+"""
+Wandelt ein Array in das Format `{1, 2, 3, ...}` um
+
+```jldoctest
+julia> set_string([1, 2, 3, 4])
+"{1, 2, 3, 4}"
+```
+"""
+set_string = x -> "{$(join(x, ", "))}"
 
 export generate_knapsack_question
+"""
+Generiert eine Frage, in der ein optimaler Knapsack bestimmt werden soll
+"""
 function generate_knapsack_question(;m=5, c=10, weight_range=1:10, profit_range=1:10, greedy_check=true)
 	ambiguous = true
 	knapsack = w = p = []

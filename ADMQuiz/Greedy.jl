@@ -5,11 +5,10 @@ push!(LOAD_PATH, dirname(dirname(@__FILE__)))
 using ADMStructures
 using MoodleQuiz
 
-# TODO: maybe move Partition to ADMStructures?
 export Partition
 """
-Disjoint-Set structure für Kruskal
-See https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+[Disjoint-Set structure](https://en.wikipedia.org/wiki/Disjoint-set_data_structure)
+für Kruskal
 """
 type Partition
     parent::Dict
@@ -91,21 +90,21 @@ function kruskal(G, c; break_on_unique=false, min_depth=Inf)
 end
 
 export random_spantree
+"""
+Generiert einen zufälligen Spannbaum -- Kruskal mit zufälligen Gewichten
+"""
 function random_spantree(G)
-    """
-    Generiert einen zufälligen Spannbaum -- Kruskal mit zufälligen Gewichten
-    """
     c = rand(1:100, length(G.V), length(G.V))
     T = kruskal(G, c)
     return T
 end
 
 export uniqueify_spantree
+"""
+Algorithmus 2.2: Generiert eine Kostenfunktion für den Graphen, sodass ``T``
+der eindeutige Minimale Spannbaum ist.
+"""
 function uniqueify_spantree(G; range_on_tree=1:8, offset_range=1:1)
-  """
-  Modifiziert die Kosten des Graphen sodass `T`
-  der eindeutige Minimale Spannbaum ist.
-  """
   T = random_spantree(G)
   c = zeros(Int64, length(G.V), length(G.V))
 
@@ -129,6 +128,9 @@ greedy_labelling!(STD_GRAPH)
 spring_positions!(STD_GRAPH, width=5, height=5)
 
 export generate_spantree_question
+"""
+Generiert eine Frage, in der ein minimaler Spannbaum bestimmt werden soll
+"""
 function generate_spantree_question(G::Graph=STD_GRAPH; range_on_tree=1:8, offset_range=1:1)
     T, c = uniqueify_spantree(G)
 
@@ -191,11 +193,11 @@ function generate_spantree_question(G::Graph=STD_GRAPH; range_on_tree=1:8, offse
 	return q
 end
 
+"""
+Hilfsfunktion für [`random_spantree`](@ref), im Prinzip eine DFS.
+Findet das teuerste Gewicht auf dem (vorausgesetzt eindeutigen) ``s``-``t``-Weg.
+"""
 function max_edge_in_path(G::Graph, c, s=1, t=-1; edges=G.E)
-	"""
-	Hilfsfunktion für `random_spantree`, im Prinzip eine DFS.
-	Findet das teuerste Gewicht auf dem (vorausgesetzt eindeutigen) s-t-Weg.
-	"""
 	# Wir benötigen eine symmetrische Distanzmatrix
     assert(c == transpose(c))
     
@@ -232,10 +234,11 @@ function max_edge_in_path(G::Graph, c, s=1, t=-1; edges=G.E)
 end
 
 export uniqueify_matroid
+"""
+Algorithmus 2.2: Generiert eine Kostenfunktion für das Matroid, sodass ``B``
+die eindeutige Minimalbasis ist
+"""
 function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
-	"""
-	Algorithmus 2.2
-	"""
 	for tries in 1:10
 		costs = Dict()
 
@@ -271,6 +274,9 @@ function uniqueify_matroid(m::Matroid, range_on_basis=1:8, offset_range=1:1)
 end
 
 export generate_matroid_question
+"""
+Generiert eine Frage, in der eine Minimalbasis bestimmt werden soll
+"""
 function generate_matroid_question(M::Matroid=STD_MATROID; range_on_basis=1:8, offset_range=1:1)
 	"""
 	Generiert Matroid-Frage im MoodleQuiz-Format

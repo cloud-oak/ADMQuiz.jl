@@ -1,14 +1,5 @@
 # ADMQuiz
 
-## ADMStructures.jl
-Hier finden sich allgemeine Strukturen der ADM, wie Matroide, Graphen und Digraphen
+Das Modul [ADMQuiz/ADMStructures](@ref ADMStructures) implementiert die benötigten Datenstrukturen
+wie Matroide und Graphen, und allgemeine Operationen darauf.
 
-### Matroide
-```@docs
-Matroid
-```
-
-```@docs
-sp_labelling!
-
-```

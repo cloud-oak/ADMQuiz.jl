@@ -10,7 +10,10 @@ using MoodleTools
 export Mode, DijkstraFail, TwoPaths, None
 @enum Mode DijkstraFail TwoPaths None
 
-export unique_shortestpaths!, dijkstra, rating_dijkstra 
+export dijkstra, rating_dijkstra 
+"""
+Der Bellman-Ford-Algorithmus
+"""
 function bellman_ford(G::Graph, c; root=1, edge_subset=G.E)
     label = Dict{Int, Float32}(v => Inf for v in G.V)
     label[root] = 0
@@ -25,6 +28,9 @@ function bellman_ford(G::Graph, c; root=1, edge_subset=G.E)
     return label
 end
 
+"""
+Der Algorithmus von Dijkstra
+"""
 function dijkstra(G::Graph, c; root=1, depth=Inf)
     # dist: The distance of root -> v
     dist = Dict{Any, Any}()
@@ -54,6 +60,9 @@ function dijkstra(G::Graph, c; root=1, depth=Inf)
     return dist
 end
 
+"""
+Der Algorithmus von Dijkstra, erweitert um Funktionen zur Bewertung einer Instanz
+"""
 function rating_dijkstra(G::Graph, c; root=1, depth=Inf)
     # rating variables
     completely_unique = true
@@ -104,6 +113,10 @@ function rating_dijkstra(G::Graph, c; root=1, depth=Inf)
     ), S
 end
 
+export unique_shortestpaths
+"""
+Implementierung von Algorithmus 3.3 aus der Arbeit
+"""
 function unique_shortestpaths(G; root=1, dijkstra_fail=false, range_on_tree=1:8, offset_range=1:1)
     # Finde gewurzelten Spannbaum
     connected = Set([root])
@@ -156,6 +169,9 @@ function unique_shortestpaths(G; root=1, dijkstra_fail=false, range_on_tree=1:8,
 end
 
 export two_shortestpaths
+"""
+Implementierung von Algorithmus 3.3 aus der Arbeit, erweitert um eine gezielte Uneindeutigkeit
+"""
 function two_shortestpaths(G; s=1, t=-1, range_on_tree=1:8, offset_range=1:1)
     if t == -1
         t = G.V[end]
@@ -203,7 +219,7 @@ end
 
 export all_paths
 """
-A DFS that returns all s-t-Paths and their lengths
+Eine DFS die alle ``s``-``t``-Wege und ihre Länge zurück gibt
 """
 function all_paths(G::Graph; c=nothing, s=1, t=-1)
     if c isa Void
@@ -246,6 +262,9 @@ function all_paths(G::Graph; c=nothing, s=1, t=-1)
 end
 
 export reachable
+"""
+Überprüft, ob ``t`` von ``s`` aus erreichbar ist
+"""
 function reachable(G::Graph, s=1, t=-1)::Bool
     if t == -1
         t = G.V[end]
@@ -269,6 +288,9 @@ function reachable(G::Graph, s=1, t=-1)::Bool
 end
 
 export generateOnestepDijkstraQuestion
+"""
+Generiert eine Frage, die einen Einzelschritt des Dijkstra-Algorithmus abfragt
+"""
 function generateOnestepDijkstraQuestion(G::Graph; range_on_tree=1:8, offset_range=1:1, minsteps=2, maxleft=3, max_iterations=100)
     allowed_depths = collect(minsteps:(length(G.V) - maxleft))
     ambiguous = true
@@ -328,6 +350,9 @@ function generateOnestepDijkstraQuestion(G::Graph; range_on_tree=1:8, offset_ran
 end
 
 export generateDijkstraQuestion
+"""
+Generiert eine Frage, in der kürzeste Wege bestimmt werden sollen
+"""
 function generateDijkstraQuestion(G::Graph; mode::Mode=None, range_on_tree=1:8, offset_range=1:1, minsteps=2, maxleft=3, max_iterations=100)
     T = []
     c = Dict()

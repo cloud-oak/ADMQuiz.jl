@@ -10,15 +10,49 @@ using MoodleQuiz
 preamble = readstring(joinpath(dirname(@__FILE__), "res", "tikzheader.tex"))
 
 export powerset
+"""
+Gibt die Potenzmenge zurück.
+
+```jldoctest
+julia> powerset([1, 2, 3])
+8-element Array{Any,1}:
+ Int64[]  
+ [1]      
+ [2]      
+ [3]      
+ [1, 2]   
+ [1, 3]   
+ [2, 3]   
+ [1, 2, 3]
+```
+"""
 function powerset(x)
-	result = reduce(union, Set(), [combinations(x, n) for n in 0:length(x)])
-  return result
+    result = reduce(union, Set(), [combinations(x, n) for n in 0:length(x)])
+    return result
 end
 
 export random_order
+"""
+Permutiert eine Liste zufällig.
+julia> srand(42); random_order([1, 2, 3, 4])
+4-element Array{Int64,1}:
+ 4
+ 3
+ 1
+ 2
+"""
 random_order(list) = list[randperm(length(list))]
 
 export argmin
+"""
+Gibt den Index eines niedrigsten Wertes zurück.
+Bestimmt wahlweise auch, ob dieser Index eindeutig ist.
+
+```jldoctest
+julia> argmin([1, 2, 3], return_uniq=true)
+(1, true)
+```
+"""
 function argmin(list; by=x->x, return_uniq::Bool=false)
 	if by isa Dict
 		dict = by
@@ -46,6 +80,18 @@ function argmin(list; by=x->x, return_uniq::Bool=false)
 end
 
 export Matroid
+"""
+Ein Matroid in abstrakter Repräsentation. Wird initialisiert durch das Basensystem:
+
+Variablen:
+* `E`: Grundmenge des Matroids
+* `I`: Unabhängige Mengen des Matroids
+
+```jldoctest
+julia> m = Matroid(bases=[(1, 2, 3), (2, 3, 4)])
+ADMStructures.Matroid(Any[1, 2, 3, 4], Any[Int64[], [1], [2], [3], [4], [1, 2], [1, 3], [2, 3], [2, 4], [3, 4], [1, 2, 3], [2, 3, 4]])
+```
+"""
 type Matroid
 	E
 	I
@@ -59,7 +105,7 @@ function setlt(a, b)
 	end
 end
 
-function Matroid(;bases=[], costs=[])
+function Matroid(;bases=[])
 	E = reduce(union, Set(), bases)
 	sort!(E)
 	I = reduce(union, Set(), [powerset(b) for b in bases])
@@ -67,14 +113,21 @@ function Matroid(;bases=[], costs=[])
 		sort!(i)
 	end
 	sort!(I, lt=setlt)
-	return Matroid(E, I)
+    m = Matroid(E, I)
+    assert(is_matroid(m))
+	return m
 end
 
 export is_matroid
+"""
+Prüft, ob `m` tatsächlich ein Matroid ist.
+
+```jldoctest
+julia> is_matroid(m)
+true
+```
+""" 
 @memoize function is_matroid(m::Matroid)
-  """
-  Prüft, ob `m` tatsächlich ein Matroid ist.
-  """ 
   # Unabhängigkeits-Bedingung (m1)
   for e in m.I
       for s in powerset(e)
@@ -102,12 +155,15 @@ export is_matroid
   return true
 end
 
-@memoize function dim(m::Matroid)
-	return maximum([length(i) for i in m.I])
-end
-
 export repr_html, repr_tex
+"""
+HTML-Repräsentation eines ADM-Objekts
+"""
+
 repr_html(x::Any) = string(x)
+"""
+LaTeX-Repräsentation eines ADM-Objekts
+"""
 repr_tex(x::Any) = string(x)
 
 repr_tex(v::Vector) = length(v) == 0 ? "\\emptyset" : "\\{$(join([repr_tex(x) for x in v], ", "))\\}"
@@ -124,15 +180,18 @@ repr_html(m::Matroid, c) = string(
   "</tr></table>",
   "</p>")
 
-export matroidGraph
-function matroidGraph(m::Matroid)
+export matroid_graph
+"""
+Gibt eine hierarchische Repräsentation des Matroids als Tikz-Picture zurück.
+"""
+function matroid_graph(m::Matroid)
 	identifier = i -> "node_$(join(i, "_"))"
 	label      = i -> length(i) == 0 ? "\\emptyset" : "\\{$(join(i, ","))\\}"
 	positions = Dict()
 
 	paths = ""
 	lastlayer = []
-	for l = 0:dim(m)
+	for l = 0:rank(m)
 		layer = [i for i in m.I if length(i) == l]
 		sort!(layer, by=identifier)
 
@@ -160,6 +219,16 @@ function matroidGraph(m::Matroid)
 end
 
 export Graph
+"""
+Enthält Information über einen Graphen, gerichtet oder ungerichtet.
+
+Variablen:
+* `V`: Die Knoten des Graphen
+* `E`: Die Kanten des Graphen
+* `positions`: Die Position der einzelnen Grahen – Wird per Federnetzwerk bestimmt, falls nicht angegeben.
+* `labels`: LaTeX-Labels für die einzelnen Knoten
+* `directed`: Boolean, der angibt, ob der Graph gerichtet ist
+"""
 type Graph
 	V::Vector{Any}
 	E::Vector{Any}
@@ -188,6 +257,9 @@ type Graph
 end
 
 export graph
+"""
+Nimmt einen Graphen und eine Kostenfunktion entgegen und wandelt den Graphen in ein `TikzPicture` um.
+"""
 function graph(G, c=nothing; highlight_edges = [], marked_nodes = [], bend="auto",
         edge_attr = (G.directed ? "graph path" : "graph edge"),
         edge_label_attr = "fill=white, circle, thin, inner sep=2pt"
@@ -221,6 +293,9 @@ function graph(G, c=nothing; highlight_edges = [], marked_nodes = [], bend="auto
 end
 
 export graph_moodle
+"""
+Funktionsweise wie [`graph`](@ref), gibt ein `MoodleFile` statt ein `TikzPicture` zurück.
+"""
 function graph_moodle(args...; kwargs...)
   TMP = tempname()
 
@@ -232,6 +307,9 @@ function graph_moodle(args...; kwargs...)
 end
 
 export graph_svg
+"""
+Funktionsweise wie [`graph`](@ref), gibt SVG-Rohdaten zurück.
+"""
 function graph_svg(args...; kwargs...)
   save(SVG("tmp"), graph(args...; kwargs...))
   svg = ""
@@ -242,17 +320,16 @@ function graph_svg(args...; kwargs...)
 end
 
 export spring_positions
+"""
+Findet das bestmögliche rechteckige Federnetzwerk, indem folgendes fixiert ist:
+- der erste Knoten auf ``(0, 0)``
+- der letzte Knoten auf ``(w, 0)``
+- ein Knoten auf ``(\\cdot, h/2)``
+- ein Knoten auf ``(\\cdot, -h/2)``
+Alle Möglichkeiten für die letzten beiden Knoten werden
+in Betracht gezogen und die beste Kombination gewählt.
+"""
 function spring_positions(G; width=8, height=5, iterations=100, springlength=0, subdivisions=20)
-  """
-  Brute force a rectangular spring layout by fixing:
-  - the first node on (0, 0)
-  - the last node on (width, 0)
-  - any node on (*, height/2)
-  - any other node on (*, -height/2)
-  All choices for the last two nodes are considered
-  and the one where the spring lengths differ the least
-  from the given spring length is chosen.
-  """
   n = length(G.V)
   p = zeros(n, 2)
 
@@ -325,11 +402,17 @@ function spring_positions(G; width=8, height=5, iterations=100, springlength=0, 
 end
 
 export spring_positions!
+"""
+Inplace-Version von [`spring_positions`](@ref)
+"""
 function spring_positions!(G; width=8, height=5, iterations=100, springlength=0)
   G.positions = spring_positions(G, width=width, height=height, iterations=iterations, springlength=springlength)
 end
 
 export build_wheel_graph
+"""
+Generiert einen [Radgraphen](https://en.wikipedia.org/wiki/Wheel_graph) mit `n` Speichen.
+"""
 function build_wheel_graph(n)
   V = collect(1:n)
   labels = ["v_{$i}" for i in V]
@@ -354,6 +437,9 @@ function build_wheel_graph(n)
 end
 
 export build_mesh_graph
+"""
+Generiert einen rechteckigen [Gittergraphen](https://de.wikipedia.org/wiki/Gittergraph).
+"""
 function build_mesh_graph(width, height)
   n = width * height
 
@@ -371,17 +457,41 @@ function build_mesh_graph(width, height)
 end
 
 export rank
+"""
+Gibt den Rang eines Matroids zurück
+```jldoctest
+julia> ADMStructures.rank(m)
+3
+```
+"""
 function rank(m::Matroid)
   return maximum(length(e) for e in m.I)
 end
 
 export bases
+"""
+Gibt die Basen eines Matroids zurück
+```jldoctest
+julia> bases(m)
+2-element Array{Array{Int64,1},1}:
+ [1, 2, 3]
+ [2, 3, 4]
+```
+"""
 @memoize function bases(m::Matroid)
   r = rank(m)
   return [b for b in m.I if length(b) == r]
 end
 
 export circles
+"""
+Gibt die Kreise eines Matroids zurück
+```jldoctest
+julia> circles(m)
+1-element Array{Any,1}:
+ [1, 4]
+```
+"""
 @memoize function circles(m::Matroid)
   circles = []
   for d in setdiff(powerset(m.E), m.I)
@@ -400,19 +510,19 @@ export circles
 end
 
 export greedy_labelling!
+"""
+Gibt den Knoten des Graphen Label, wie es für Minimale Spannbäume üblich ist.
+Alle Knoten erhalten ein Label ``v_i``.
+"""
 function greedy_labelling!(G::Graph)
-    """
-    Labels the vertices so that it is useful for minimal spantrees.
-    All vertices are labelled "v_i"
-    """
     G.labels = ["v_{$i}" for (i, v) in enumerate(G.V)]
 end
 
 export sp_labelling!
 """
-Labels the vertices so that it is useful for shortest paths.
-The first vertex is labelled "s", the last vertex "t".
-All other vertices are labelled "v_i"
+Gibt den Knoten des Graphen Label, wie es für Kürzeste Wege / Max Flow üblich ist.
+Der erste Knoten wird mit ``s`` gelabelt, der letzte mit ``t``.
+Alle anderen Knoten erhalten ein Label ``v_i``.
 """
 function sp_labelling!(G::Graph)
     G.labels = ["v_{$(i-1)}" for (i, v) in enumerate(G.V)]

@@ -9,9 +9,9 @@ using MoodleTools
 
 export has_circle
 """
-Checks whether a given Graph has a circle.
-In digraphs it will look for directed circles whereas in undirected
-graphs it will look for undirected circles.
+Überprüft, ob ein gegebener Graph einen Kreis hat.
+In gerichteten Graphen prüft er den Graphen auf gerichtete Kreise,
+analog für ungerichtete Graphen.
 """
 function has_circle(G::Graph, exclude_whirls=true)
     for v in G.V
@@ -28,6 +28,9 @@ function has_circle(G::Graph, exclude_whirls=true)
 end
 
 export uniqueify_network
+"""
+Implementierung von Algorithmus 5.2 aus der Arbeit
+"""
 function uniqueify_network(proto::Graph; flow_value=5, rand_range=1:5, s=first(proto.V), t=last(proto.V))
     # Schritt 1: Generiere einen kreisfreien Fluss, Grundvoraussetzung für ein kreisfreies N_f
     circ = true
@@ -144,6 +147,9 @@ function uniqueify_network(proto::Graph; flow_value=5, rand_range=1:5, s=first(p
 end
 
 export generate_maxflow_question
+"""
+Generiert eine Frage, in der ein Max Flow bestimmt werden soll
+"""
 function generate_maxflow_question(G::Graph; flow_value=5, rand_range=1:5)
     N, c, f = uniqueify_network(G, flow_value=flow_value, rand_range=rand_range)
 
