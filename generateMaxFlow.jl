@@ -7,7 +7,7 @@ using MaxFlow
 using Tqdm
 using MoodleQuiz
 
-NUM_EXCERCISES = 10        # Anzahl an Aufgaben, die generiert werden
+NUM_EXCERCISES = 20        # Anzahl an Aufgaben, die generiert werden
 FLOW_VALUE = 5             # Flusswert
 RANDOM_RANGE = 1:5         # Zufallsbereich
 

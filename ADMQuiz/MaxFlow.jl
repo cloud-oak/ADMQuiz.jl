@@ -49,7 +49,7 @@ function uniqueify_network(proto::Graph; flow_value=5, rand_range=1:5, s=first(p
         fmin = zeros(length(proto.E)) # untere Grenze für `flow` = -c((w, v))
         fmax = zeros(length(proto.E)) # obere  Grenze für `flow` =  c((v, w))
 
-        for f in single_flows
+        for (f, l) in single_flows
             for (v, w) in zip(f[1:end-1], f[2:end])
                 if (v, w) in proto.E
                     flow[e2i[(v, w)]] += 1 # Fluss für v->w positiv
