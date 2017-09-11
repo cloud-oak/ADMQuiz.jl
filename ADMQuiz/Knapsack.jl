@@ -57,7 +57,7 @@ function generate_knapsack_question(;m=5, c=10, weight_range=1:10, profit_range=
 		w = rand(weight_range, m)
 		p = rand(profit_range, m)
 
-		α, γ, knapsacks = unzip(alpha(m, weight, c, w, p) for weight in 0:c)	
+		α, γ, knapsacks = unzip(alpha(m, weight, c, p, w) for weight in 0:c)	
 
 		αₘₐₓ = maximum(α)
 		indices = [i for (i, a) in enumerate(α) if a == αₘₐₓ]
@@ -106,8 +106,8 @@ function generate_knapsack_question(;m=5, c=10, weight_range=1:10, profit_range=
         \\begin{array}{l|$(repeat("c", len))}
             &$(join(1:len, "&")) \\\\
             \\hline
-            w&$(join(w, "&")) \\\\
-            p&$(join(p, "&"))
+            \\text{Gewicht}&$(join(w, "&")) \\\\
+            \\text{Nutzen}&$(join(p, "&"))
         \\end{array}
         \$\$
         $(EmbedInput(input))

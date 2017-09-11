@@ -10,8 +10,8 @@ using Tqdm
 NUM_EXCERCISES  = 100     # Anzahl der Aufgaben, die generiert werden
 NUM_ELEMENTS    = 5       # Anzahl an Elementen in einer Knapsack Instanz
 CAPACITY        = 10      # Kapazität des Knapsacks
-WEIGHT_RANGE    = 1:10    # Bereich, in dem sich die Gewichte befinden
-PROFIT_RANGE    = 1:10    # Bereich für die Nutzenswerte
+WEIGHT_RANGE    = 1:9     # Bereich, in dem sich die Gewichte befinden
+PROFIT_RANGE    = 1:9     # Bereich für die Nutzenswerte
 PREVENT_GREEDY  = false   # Ob Greedy-lösbare Instanzen verworfen werden sollen 
 
 questions = []
@@ -27,5 +27,5 @@ for i in tqdm(1:NUM_EXCERCISES)
 	))
 end
 
-quiz = Quiz(questions, Category="KnapsackFull")  # Fragen -> Quiz
+quiz = Quiz(questions, Category="Knapsack")      # Fragen -> Quiz
 exportXML(quiz, "knapsack.xml")                  # Quiz -> XML
