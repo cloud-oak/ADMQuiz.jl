@@ -4,3 +4,6 @@
 [submodule "Tqdm.jl"]
 	path = Tqdm.jl
 	url = https://github.com/cloud-oak/Tqdm.jl
+[submodule "Memoize.jl"]
+	path = Memoize.jl
+	url = https://github.com/cloud-oak/Memoize.jl
